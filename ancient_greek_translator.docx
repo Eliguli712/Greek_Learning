@@ -1,0 +1,883 @@
+Ancient Greek Semantic Parser - High Fidelity Training
+
+M1. Proposal:
+We implement the framework as a layered semantic compiler. Each input passes through phonemic normalization, morphemic segmentation, lexeme normalization, semantic token assignment, syntactic/logical relation inference, and final DAG composition. All intermediate layers are serialized as structured JSON outputs, which allows us to evaluate stability and correctness at each stage rather than only at the final output layer. We run both single-item and batch analysis pipelines, and measure phonemic consistency, morphemic accuracy, lemma normalization accuracy, semantic token correctness, relation accuracy, and DAG validity.
+
+The current method builds linguistic structure from the bottom up: phonemes are normalized first, then grouped into morphemes, then mapped to lexemes, then retyped as semantic tokens, then organized into syntactic/logical relations, then segmented into semantic blocks using an axiomatic boundary model rather than punctuation, and finally compiled into a typed DAG. The resulting system is interpretable, modular, and suitable for custom semantic analysis without relying on standard punctuation-based segmentation or purely frequency-driven tokenization.
+
+S1. Abstract Ideas (Ἀφηρημέναι Ἰδέαι): 
+Project overflow
+This project does not begin by training a large end-to-end model over a mixed corpus.
+Instead, it builds a runnable semantic compiler prototype whose workflow is:
+text input → layered analysis → structured intermediate representations → DAG assembly → rule-based validation → statistical analysis
+The guiding principle is that every layer must remain visible, inspectable, comparable, and scoreable.
+The system therefore replaces frequency-driven tokenization with a word-semantics tokenizer based on linguistically meaningful units.
+
+S2. Research Goals:
+The goal is to construct a structured pipeline for Latin and Ancient Greek/Ελληνικά that preserves semantic stability by analyzing language through interpretable layers rather than opaque token statistics.
+
+M2. Split Determinators:
+Word split by phonetics and morpheme 
+Word Analysis: What “Analysis” Means in This Project
+Analysis here is not model loss minimization.
+It is a layer-by-layer diagnosis.
+
+M3. Project Directory Structures: 
+The current project directory is split into multiple layers as following
+ancient_greek_interculator_project/
+├── data/
+│   ├── lexica/
+│   │   ├── latin_lemmas.json
+│   │   ├── greek_lemmas.json
+│   │   ├── morph_rules.json
+│   │   └── semantic_map.json
+│   ├── gold/
+│   │   ├── dev_examples.jsonl
+│   │   └── test_examples.jsonl
+│   └── translit/
+│       ├── greek_to_latin.json
+│       └── phoneme_features.json
+├── src/
+│   ├── normalize.py
+│   ├── phoneme.py
+│   ├── morpheme.py
+│   ├── lexeme.py
+│   ├── semantic_tokenizer.py
+│   ├── syntax_logic.py
+│   ├── dag.py
+│   ├── validate.py
+│   ├── pipeline.py
+│   └── metrics.py
+├── scripts/
+│   ├── run_single.py
+│   ├── run_batch.py
+│   ├── evaluate.py
+│   └── export_graph.py
+└── outputs/
+
+Overall pipeline
+The full system is organized as the following pipeline:
+input text
+  ↓
+phoneme analyzer
+  ↓
+morpheme segmenter
+  ↓
+lexeme normalizer
+  ↓
+semantic tokenizer
+  ↓
+syntax / logic resolver
+  ↓
+DAG builder + validator
+  ↓
+analysis / scoring / export
+Each module performs a single interpretable task and outputs a structured JSON object for the next layer.
+
+
+M4. Layer by Layer Implementation:
+
+Systematic Parse
+The system should support:
+	•	stable phonemic normalization,
+	•	rule-based morphemic segmentation,
+	•	lexeme normalization,
+	•	semantic token typing,
+	•	syntactic and logical relation inference,
+	•	DAG construction and validation,
+	•	later extension to multilingual and multimodal grounding.
+
+4.1 Phoneme Layer
+Purpose
+Use the word μεγαλόδους (big teeth) as an parsing example
+This layer does not perform speech recognition.
+Its purpose is to convert the input into a stable phonemic signature.
+Input
+	•	Latin text or Ancient Greek text
+	•	optionally pre-transliterated text
+Operations
+	•	orthographic normalization
+	•	diacritic normalization
+	•	grapheme/digraph to phoneme conversion
+	•	syllabification
+	•	phoneme feature assignment
+Output
+Example output schema:
+{
+  "surface": "μεγαλόδους",
+  "normalized": "μεγαλόδους",
+  "syllables": ["me", "ga", "ló", "dous"],
+  "phonemes": [
+    {"seg": "m", "features": {"type": "consonant", "voicing": "voiced"}},
+    {"seg": "e", "features": {"type": "vowel", "height": "mid"}}
+  ]
+}
+Resources
+	•	CLTK Ancient Greek transcription
+	•	CLTK Latin transcription
+	•	IPA feature inventory
+⸻
+4.2 Morpheme Layer
+Purpose
+This layer performs genuine morphemic segmentation, not BPE-style frequency segmentation.
+Input
+	•	normalized token
+	•	phoneme and syllable boundaries
+Operations
+	•	root matching
+	•	prefix matching
+	•	suffix matching
+	•	inflectional ending identification
+	•	candidate segmentation scoring
+Output
+Example schema:
+{
+  "token": "μεγαλόδους",
+  "morphemes": [
+    {"form": "μεγαλο-", "type": "prefix/combining form", "gloss": "large"},
+    {"form": "οδους", "type": "root", "gloss": "tooth"}
+  ]
+}
+Initial implementation strategy
+	•	lexicon-first matching
+	•	rule fallback
+	•	longest valid match
+	•	legality checks against morphological templates
+⸻
+4.3 Lexeme Layer
+Purpose
+This layer maps morpheme bundles to a normalized lemma / lexeme representation.
+Input
+	•	morpheme sequence
+Operations
+	•	lemma lookup
+	•	variant spelling normalization
+	•	terminology standardization
+	•	transliteration storage
+Output
+Example:
+{
+  "lemma": "ὀδούς",
+  "lexeme": "μεγαλόδους",
+  "canonical_form": "megalodous",
+  "pos": "NOUN"
+}
+Note
+For compound or technical forms, the system may preserve both:
+	•	the normalized lexeme,
+	•	and the internal lexical source components.
+⸻
+4.4 Semantic Token Layer
+Purpose
+This layer turns the lexical unit into a word-semantics token.
+Input
+	•	lemma
+	•	part of speech
+	•	morphological information
+	•	domain lexicon
+Operations
+Assign a semantic type and legal attachment behavior.
+Output
+Example:
+{
+  "token_id": "t1",
+  "lemma": "μεγαλόδους",
+  "semantic_type": "ENTITY",
+  "semantic_role": "taxon_name_or_tooth_descriptor",
+  "allowed_edges": ["COMPOSED_OF", "REALIZES", "GROUNDS_TO"]
+}
+Important principle
+At this point, the token is no longer only a string.
+It is now:
+	•	a form,
+	•	a semantic category,
+	•	a set of legal graph relations,
+	•	and a unit with an ambiguity profile.
+⸻
+4.5 Syntax / Logical Relation Layer
+Purpose
+This layer prevents semantic drift caused by bad attachment or scope assignment.
+Input
+	•	semantic tokens
+	•	sentence order
+	•	logical triggers
+	•	relation templates
+Operations
+	•	head–modifier attachment
+	•	argument linking
+	•	negation scope
+	•	comparison scope
+	•	conditionals
+	•	discourse relations
+	•	coreference later, if needed
+Output
+Example:
+{
+  "relations": [
+    {"source": "n_pred", "target": "n_subj", "type": "GOVERNS"},
+    {"source": "n_neg", "target": "n_pred", "type": "SCOPES_OVER"}
+  ]
+}
+Implementation strategy
+At first:
+	•	rule templates
+	•	small CFG / CKY subparser
+	•	operator lexicon triggers
+⸻
+4.6 DAG Composition Layer
+Purpose
+This layer merges all previous results into a typed directed acyclic graph.
+Input
+	•	phoneme nodes
+	•	morpheme nodes
+	•	lexeme nodes
+	•	semantic nodes
+	•	syntax / logic relations
+	•	optional evidence nodes
+Operations
+	•	graph assembly
+	•	node and edge typing
+	•	acyclicity check
+	•	scope closure check
+	•	attachment closure check
+Output
+The final DAG.
+Worked Example: μεγαλόδους
+This section shows how the system handles the example token μεγαλόδους as an illustrative case.
+
+Solid word check: use the word μεγαλόδους (big teeth) as an parsing example
+M3a.1 Surface Form
+μεγαλόδους
+M3a.2 Phoneme Layer
+Normalized token:
+μεγαλόδους
+Possible syllabification:
+me | ga | ló | dous
+Illustrative phonemic structure:
+[
+  {"seg": "m", "features": {"type": "consonant"}},
+  {"seg": "e", "features": {"type": "vowel"}},
+  {"seg": "g", "features": {"type": "consonant"}},
+  {"seg": "a", "features": {"type": "vowel"}},
+  {"seg": "l", "features": {"type": "consonant"}},
+  {"seg": "ó", "features": {"type": "vowel", "stress": 1}},
+  {"seg": "d", "features": {"type": "consonant"}},
+  {"seg": "ou", "features": {"type": "diphthong"}},
+  {"seg": "s", "features": {"type": "consonant"}}
+]
+M3a.3 Morpheme Layer
+Illustrative segmentation:
+μεγαλο- | οδους
+Interpretation:
+	•	μεγαλο- = large / great
+	•	οδους (from ὀδούς) = tooth
+Structured output:
+{
+  "morphemes": [
+    {"form": "μεγαλο-", "type": "combining_form", "gloss": "large"},
+    {"form": "οδους", "type": "root", "gloss": "tooth"}
+  ]
+}
+M3a.4 Lexeme Layer
+Possible normalized lexeme representation:
+{
+  "lemma": "ὀδούς",
+  "lexeme": "μεγαλόδους",
+  "canonical_form": "megalodous",
+  "pos": "NOUN"
+}
+M3a.5 Semantic Token Layer
+Illustrative semantic typing:
+{
+  "token_id": "t1",
+  "lemma": "μεγαλόδους",
+  "semantic_type": "ENTITY",
+  "semantic_role": "large_tooth_descriptor_or_taxonomic_name",
+  "allowed_edges": ["COMPOSED_OF", "REALIZES", "HAS_SEMANTIC_ROLE", "GROUNDS_TO"]
+}
+M3a.6 DAG-Level Interpretation
+The resulting mini-graph may be represented as:
+LEXEME(μεγαλόδους)
+ ├── COMPOSED_OF → MORPHEME(μεγαλο-)
+ ├── COMPOSED_OF → MORPHEME(οδους)
+ ├── REALIZES → ENTITY(large-tooth concept / lexical entity)
+ └── HAS_SEMANTIC_ROLE → SEMANTIC_ROLE(ENTITY)
+If multimodal evidence is later attached:
+ENTITY(large-tooth concept)
+ └── GROUNDS_TO → EVIDENCE(image_patch_01)
+
+
+M5. Latent Layer Training (Sentence Transformer + NLTK):
+Local embedders
+Model of Logistical Inference (TMDB4/WENO-schemes)
+
+M6. (C1.) Open Training Sources: 
+Thesaurus opensource
+Open Greek and Latin Project
+Logeion Greek Backends
+logeion/logeion-backend: Backend scripts, files, etc. for parsing/updating dictionaries.
+
+
+Sorted by priority (open to data-scrap):
+1.  Direct Use: CTSAncientGreekXML
+    This is best suited as the input layer for tokenization, as it has already undergone word segmentation and sentence splitting, and is available as a release/ZIP archive.
+gcelano/CTSAncientGreekXML: This repository contains CTSized Ancient Greek Literature texts
+Tokenized and sentence-split CTSized Ancient Greek texts (v1.1.0)
+2.  Advanced Use: POStaggedAncientGreekXML / LemmatizedAncientGreekXML
+    If you require more than just tokens—specifically, if you also want to readily access Part-of-Speech (POS) tags or lemmas—these two options offer greater convenience:
+    •   `POStaggedAncientGreekXML` = Tokenized + Sentence-split + POS-tagged.
+gcelano/POStaggedAncientGreekXML: This repository contains Ancient Greek texts after tokenization, sentence split, and POS-tagging
+    •   `LemmatizedAncientGreekXML` = Tokenized + POS-tagged + Sentence-split + Lemmatized.
+3. Not Recommended for Direct Use as "Ready-made CSVs": First1KGreek / Perseus Canonical
+These two resources are, in themselves, repositories of raw TEI/XML texts; they are neither ready-made CSV files nor pre-processed token tables. First1KGreek is explicitly an XML file repository, while Perseus Canonical serves as a repository of canonical TEI XML texts.
+gcelano/LemmatizedAncientGreekXML
+
+B-Tree Structural Generation:
+
+MUC-Semantics Accuracy Check:
+We check the F-measure, precision and recall of the following as well as the beta customized balance of the F-score: F_β = [(1 + β^2) P R] / [(β^2 P) + R], Precision = TP / (TP + FP), Recall = TP / (TP + FN)
+We evaluate semantic accuracy using precision, recall, and F1 over gold and predicted semantic units. A semantic unit may be a morpheme analysis, a normalized lexeme, a semantic token label, or a typed DAG relation. Precision is defined as the proportion of predicted units that are correct, recall as the proportion of gold units recovered by the system, and F1 as their harmonic mean. We report both layer-specific scores and an overall weighted MUC-Semantics F1.
+We evaluate the system with precision, recall, and F-measure (F1) at five distinct levels.
+At each level, let:
+* G = gold-standard units
+* P = predicted units
+* M = correctly matched units
+Then:
+\text{Precision} = \frac{|M|}{|P|}
+\text{Recall} = \frac{|M|}{|G|}
+F_1 = \frac{2 \cdot \text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}
+Each level defines its own semantic unit and matching rule.
+
+Accuracy of Parsing
+This level evaluates whether the system correctly recovers the formal structure of the input.
+Unit of evaluation
+A parsing unit may be:
+* a constituent,
+* a dependency relation,
+* a morpheme boundary,
+* a phrase boundary,
+* or a typed syntactic edge in the DAG.
+Gold vs prediction
+* Gold: the correct parse structure
+* Prediction: the parse produced by the system
+Precision
+How many predicted structural relations are correct.
+\text{Precision}_{\text{parse}} = \frac{|\text{correct parse relations}|}{|\text{predicted parse relations}|}
+Recall
+How many gold structural relations were recovered.
+\text{Recall}_{\text{parse}} = \frac{|\text{correct parse relations}|}{|\text{gold parse relations}|}
+F1
+F1_{\text{parse}} = \frac{2 \cdot P_{\text{parse}} \cdot R_{\text{parse}}}{P_{\text{parse}} + R_{\text{parse}}}
+Example
+If the gold parse contains 10 correct constituent or dependency relations, and the system predicts 9, of which 7 are correct:
+P_{\text{parse}} = \frac{7}{9} \qquad R_{\text{parse}} = \frac{7}{10}
+Accuracy of Interpretation
+This level evaluates whether the system correctly assigns meaning after parsing.
+Unit of evaluation
+An interpretation unit may be:
+* a semantic token label,
+* a semantic role,
+* a logical operator scope,
+* a coreference link,
+* a lexeme-to-semantic mapping,
+* or a typed semantic edge in the DAG.
+Gold vs prediction
+* Gold: the intended semantic interpretation
+* Prediction: the semantic representation inferred by the system
+Precision
+How many predicted meanings are correct.
+\text{Precision}_{\text{interp}} = \frac{|\text{correct semantic units}|}{|\text{predicted semantic units}|}
+Recall
+How many gold semantic units were recovered.
+\text{Recall}_{\text{interp}} = \frac{|\text{correct semantic units}|}{|\text{gold semantic units}|}
+F1
+F1_{\text{interp}} = \frac{2 \cdot P_{\text{interp}} \cdot R_{\text{interp}}}{P_{\text{interp}} + R_{\text{interp}}}
+Example
+If the system correctly identifies:
+* μεγαλο- as a size intensifier,
+* οδους as tooth,
+* but assigns the whole lexeme the wrong semantic role,
+then the interpretation score reflects partial semantic success rather than complete failure.
+
+Accuracy of Data Collecting and Transforming
+This level evaluates the correctness of the input data pipeline.
+It checks whether the system correctly collects, normalizes, and transforms source material before analysis.
+Unit of evaluation
+A data-transform unit may be:
+* a correctly extracted token,
+* a correctly aligned passage,
+* a correctly preserved token order,
+* a correctly normalized orthographic form,
+* a correctly transformed XML field into CSV/JSON,
+* or a correctly linked metadata field.
+Gold vs prediction
+* Gold: manually verified or reference-transformed data
+* Prediction: the output of the collection/transformation pipeline
+Precision
+How many transformed items are correct.
+\text{Precision}_{\text{data}} = \frac{|\text{correct transformed units}|}{|\text{transformed units produced}|}
+Recall
+How many required gold units were preserved or recovered.
+\text{Recall}_{\text{data}} = \frac{|\text{correct transformed units}|}{|\text{gold units expected}|}
+F1
+F1_{\text{data}} = \frac{2 \cdot P_{\text{data}} \cdot R_{\text{data}}}{P_{\text{data}} + R_{\text{data}}}
+Example
+If an XML source contains 100 tokens and the transformation pipeline outputs 98 tokens, of which 95 are correctly preserved and aligned:
+P_{\text{data}} = \frac{95}{98} \qquad R_{\text{data}} = \frac{95}{100}
+This layer is especially important because a semantic system built on corrupted input will fail even if later modules are well designed.
+
+Accuracy of Transcribing and Translating a Passage
+This level measures whether a source passage is correctly rendered into another orthographic or linguistic form.
+It covers:
+* transcription,
+* transliteration,
+* translation,
+* and structured passage transfer into the semantic layer.
+Unit of evaluation
+A unit may be:
+* a phoneme correspondence,
+* a syllable correspondence,
+* a token-level transliteration,
+* a lemma-level translation,
+* a clause-level translation,
+* or a semantic equivalence unit.
+Gold vs prediction
+* Gold: verified transcription/translation
+* Prediction: the system’s transcription/translation output
+Precision
+How many produced transcribed/translated units are correct.
+\text{Precision}_{\text{trans}} = \frac{|\text{correct transcribed or translated units}|}{|\text{produced units}|}
+Recall
+How many gold units were successfully captured.
+\text{Recall}_{\text{trans}} = \frac{|\text{correct transcribed or translated units}|}{|\text{gold units}|}
+F1
+F1_{\text{trans}} = \frac{2 \cdot P_{\text{trans}} \cdot R_{\text{trans}}}{P_{\text{trans}} + R_{\text{trans}}}
+Example
+For a passage containing a technical word like μεγαλόδους:
+* transcription accuracy checks whether the phonological/orthographic mapping is correct,
+* translation accuracy checks whether the semantic content “large-tooth” is preserved,
+* and semantic translation accuracy checks whether the translated passage retains the correct semantic roles and relations.
+Accuracy of Generating a Passage
+This level evaluates whether the system can generate a passage that is structurally and semantically correct.
+Unit of evaluation
+A generation unit may be:
+* a generated token,
+* a generated morpheme sequence,
+* a generated semantic relation,
+* a generated clause,
+* or a generated passage-level semantic structure.
+Gold vs prediction
+* Gold: target passage or accepted semantic structure
+* Prediction: system-generated output
+Precision
+How many generated units are correct and appropriate.
+\text{Precision}_{\text{gen}} = \frac{|\text{correct generated units}|}{|\text{generated units}|}
+Recall
+How much of the gold target content was generated.
+\text{Recall}_{\text{gen}} = \frac{|\text{correct generated units}|}{|\text{gold target units}|}
+F1
+F1_{\text{gen}} = \frac{2 \cdot P_{\text{gen}} \cdot R_{\text{gen}}}{P_{\text{gen}} + R_{\text{gen}}}
+Interpretation
+* high precision means generation is restrained and not full of hallucinated content,
+* high recall means the generated passage captures the intended content fully,
+* high F1 means the system is both accurate and complete.
+
+Global MUC-Semantics Accuracy
+If you want one overall score, define:
+\text{MUC-Semantics-F1}=w_1F1_{\text{parse}}+w_2F1_{\text{interp}}+w_3F1_{\text{data}}+
+w_4F1_{\text{trans}}+w_5F1_{\text{gen}}
+with
+w_1+w_2+w_3+w_4+w_5=1
+A reasonable weighting for your project might be:
+w_1=0.20,\quad
+w_2=0.25,\quad
+w_3=0.15,\quad
+w_4=0.20,\quad
+w_5=0.20
+This gives slightly higher importance to interpretation, since your framework is fundamentally semantic rather than merely formal.
+
+M7. CSV and DAG Exports: 
+Exports to files written on the local disk
+M7.1 Unified token CSV
+Recommended fields:
+text_cts, passage, token_id, token_form, join, editorial_tag, sentence_id, pos, lemma, source_repo
+M7.2 Merged token table
+After custom morphology and lexeme overrides, add:
+token_uid, normalized_form, morpheme_split, morph_analysis, pos_custom, lemma_custom, confidence, pos_final, lemma_final
+M7.3 DAG export
+Generate:
+	•	nodes.csv
+	•	edges.csv
+Current DAG schema:
+Nodes
+	•	TEXT
+	•	SENTENCE
+	•	TOKEN
+	•	MORPHEME
+	•	LEXEME
+	•	SEMANTIC_ROLE
+	•	MORPH_ANALYSIS
+Edges
+	•	HAS_SENTENCE
+	•	HAS_TOKEN
+	•	HAS_MORPHEME
+	•	REALIZES_LEXEME
+	•	HAS_SEMANTIC_ROLE
+	•	HAS_MORPH_ANALYSIS
+
+
+T1. Single and Multiple Cell Runners:
+A single-item script may analyze the example word directly:
+import json
+from src.pipeline import SemanticCompiler
+resources = {}
+compiler = SemanticCompiler(resources)
+text = "μεγαλόδους"
+lang = "ancient_greek"
+result = compiler.analyze(text, lang)
+print(json.dumps(result.__dict__, ensure_ascii=False, indent=2))
+Command:
+python scripts/run_single.py
+This verifies that the entire pipeline works end to end.
+A multiple-item script may analyze the entire direct sentence of a passage or a quote:
+
+T2. Mass Generation Runners:
+We use three execution scales: a single-item runner for end-to-end validation on one token or phrase, a multiple-item runner for controlled batch analysis on sentences or quoted segments, and a mass generation runner for large-scale corpus processing. The mass runner loads structured input cells, applies the semantic compiler to each cell, serializes intermediate and final outputs, and exports token tables, graph tables, and evaluation logs for downstream analysis.
+T2.1 Definition
+A Mass Generation Runner is a scalable execution layer that:
+* loads large batches of source texts
+* splits them into processing cells
+* applies the semantic compiler to each cell
+* serializes all intermediate and final outputs
+* supports resumable, inspectable, and reproducible runs
+T2.2 Processing Unit
+A mass runner may define its processing cell as one of the following:
+* token
+* lexical item
+* phrase
+* sentence
+* line
+* passage
+* quotation block
+* full document segment
+The processing unit should be configurable depending on the experiment.
+T2.3 Standard Workflow
+source corpus
+  ↓
+dataset loader
+  ↓
+cell splitter
+  ↓
+SemanticCompiler.analyze(cell)
+  ↓
+structured output writer
+  ↓
+metrics / logs / graph export
+T2.4 Minimal Mass Runner Structure
+import json
+from pathlib import Path
+from src.pipeline import SemanticCompiler
+
+resources = {}
+compiler = SemanticCompiler(resources)
+
+input_path = Path("data/corpus/passages.jsonl")
+output_path = Path("outputs/mass_results.jsonl")
+
+with input_path.open("r", encoding="utf-8") as fin, output_path.open("w", encoding="utf-8") as fout:
+    for line in fin:
+        item = json.loads(line)
+        result = compiler.analyze(item["text"], item["language"])
+        fout.write(json.dumps(result.__dict__, ensure_ascii=False) + "\n")
+
+Command:
+python scripts/run_mass.py
+
+T2.5 Required Components
+A Mass Generation Runner should include:
+Loader
+Reads:
+* JSONL
+* CSV
+* XML-derived tables
+* tokenized passage files
+Splitter
+Splits input into units such as:
+* single sentence
+* quoted segment
+* semantic block
+* passage window
+Runner
+Calls:
+compiler.analyze(text, language)
+for each processing cell.
+Writer
+Stores:
+* raw structured outputs
+* merged token tables
+* nodes.csv
+* edges.csv
+* evaluation logs
+Logger
+Tracks:
+* item id
+* status
+* runtime
+* failure reason
+* graph validity
+* output path
+T2.6 Output Products
+A mass runner should produce one or more of the following:
+* mass_results.jsonl
+* merged_tokens.csv
+* nodes.csv
+* edges.csv
+* evaluation_summary.json
+* error_log.jsonl
+T2.7 Use Cases
+Mass Generation Runners are used for:
+* full-corpus semantic compilation
+* large-scale tokenization experiments
+* morphology and lexeme normalization at corpus level
+* DAG construction over many passages
+* comparative runs across languages
+* later multimodal grounding experiments
+T2.8 Recommended Modes
+Mode A: Clean Tokenization Mode
+Input:
+* CTSAncientGreekXML-derived cells
+Output:
+* token-level results without inherited POS/lemma bias
+Mode B: Lemmatized Baseline Mode
+Input:
+* LemmatizedAncientGreekXML-derived cells
+Output:
+* token + morphology + lexeme baseline
+Mode C: Custom Semantic Mode
+Input:
+* merged token tables with custom morphology and lexeme layers
+Output:
+* full semantic token and DAG structures
+
+
+
+T2.9 Practical Goals
+The purpose of a mass runner is not merely speed.
+Its purpose is to make large-scale semantic analysis:
+* reproducible
+* inspectable
+* modular
+* resumable
+* evaluation-ready
+
+M8. Best Practical Startovers
+The implementation should not begin with the full system all at once.
+Step 1: Word-level pipeline
+	•	phoneme
+	•	morpheme
+	•	lexeme
+	•	semantic token
+Step 2: Phrase-level relations
+	•	modifier
+	•	compound
+	•	transliteration relation
+Step 3: Syntax / logic
+	•	negation
+	•	comparison
+	•	condition
+Step 4: Grounding
+	•	evidence nodes
+	•	GROUNDS_TO edges
+
+
+M9. Comparison and Generation of Large-Section Texts:
+M9 extends the framework to the comparison and generation of large textual sections, including multi-sentence passages and quoted blocks. Rather than relying on linear continuation, the system composes section-level outputs from validated semantic blocks and sentence DAGs, then evaluates them through section-level structural and semantic precision, recall, and F1. This allows paragraph-scale comparison, controlled passage generation, and discourse-level graph analysis while preserving interpretability and validation at every layer.
+M9 extends the system from token-level and sentence-level analysis to the comparison, reconstruction, and controlled generation of large textual sections, such as paragraphs, continuous passages, quoted blocks, or aligned multi-sentence units. The purpose of this module is not to generate fluent text by unconstrained continuation, but to produce and compare larger passages through the accumulation of validated lower-level structures.
+M9.1 Goal
+The goal of this module is to make large-section processing possible while preserving:
+* semantic continuity,
+* structural traceability,
+* logical scope consistency,
+* lexeme normalization consistency,
+* and DAG-level validity across multiple sentences.
+This module therefore serves two complementary purposes:
+1. Comparison of large textual sections It compares two or more passages at the level of:
+    * token structure,
+    * morpheme structure,
+    * lexeme normalization,
+    * semantic roles,
+    * logical operators,
+    * and graph topology.
+2. Generation of large textual sections It generates multi-sentence output from validated semantic graphs rather than from raw linear token continuation.
+M9.2 Input Units
+A large textual section may be defined as:
+* a paragraph,
+* a quoted block,
+* a passage window,
+* a sequence of adjacent sentences,
+* or a discourse segment extracted from a source text.
+Each large section is treated as an ordered sequence of smaller analysis cells:
+S = (c_1, c_2, \dots, c_n)
+where each cell c_i may be a sentence, clause block, or semantic block.
+M9.3 Comparison of Large Sections
+M9.3.1 Purpose
+Large-section comparison checks whether two passages preserve the same structure and meaning, even when:
+* word order differs,
+* lexical choices differ,
+* morphology differs,
+* or translation/transcription introduces surface variation.
+M9.3.2 Comparison layers
+Comparison is performed at several levels:
+1. Token sequence comparison Are the token units aligned and preserved?
+2. Morpheme sequence comparison Do the passages preserve the same internal morphological structure?
+3. Lexeme comparison Do they normalize to the same lexical core?
+4. Semantic role comparison Do the same entities, attributes, predicates, and operators appear?
+5. Logical structure comparison Are negation, comparison, condition, and scope preserved?
+6. DAG comparison Are the two semantic graphs topologically and semantically equivalent or near-equivalent?
+M9.3.3 Output
+The system outputs:
+* local alignment tables,
+* block-level similarity scores,
+* graph overlap scores,
+* and a global passage comparison score.
+Example output schema:
+{
+  "section_id_a": "passage_A",
+  "section_id_b": "passage_B",
+  "token_similarity": 0.84,
+  "morpheme_similarity": 0.79,
+  "lexeme_similarity": 0.88,
+  "semantic_similarity": 0.81,
+  "graph_similarity": 0.76,
+  "differences": [
+    {"type": "operator_scope_shift", "location": "sentence_3"},
+    {"type": "entity_role_change", "location": "sentence_5"}
+  ]
+}
+M9.4 Generation of Large Sections
+M9.4.1 Principle
+Large-section generation is not performed by next-token continuation alone.
+Instead, generation proceeds from:
+* validated lower-level units,
+* validated semantic blocks,
+* validated sentence graphs,
+* and finally a section-level graph.
+Thus the generation path is:
+semantic blocks
+  ↓
+sentence DAGs
+  ↓
+section-level DAG
+  ↓
+ordered realization
+  ↓
+generated passage
+M9.4.2 Generation stages
+1. Select semantic units Choose the entities, predicates, attributes, and operators to be expressed.
+2. Assemble sentence-level subgraphs Group semantic material into coherent sentence structures.
+3. Assemble discourse-level graph Link sentence graphs through continuity, reference, and logical progression.
+4. Linearize Convert the graph into ordered lexical realizations.
+5. Surface realization Produce the final large-section text.
+M9.4.3 Constraint
+At each stage, the system must preserve:
+* attachment legality,
+* scope closure,
+* graph acyclicity,
+* and discourse continuity.
+No sentence may be added if it breaks graph validity.
+M9.5 Section-Level DAG
+To support large-section analysis, the DAG is expanded from token- and sentence-level nodes to section-level nodes.
+Additional node types
+* SECTION
+* BLOCK
+* DISCOURSE_ROLE
+* REFERENCE_CHAIN
+Additional edge types
+* HAS_BLOCK
+* PRECEDES
+* CONTINUES_TOPIC
+* REFERS_BACK_TO
+* SCOPES_OVER_SECTION
+* CONTRASTS_WITH
+* SUPPORTS
+This allows the project to represent not only local syntax, but also paragraph-scale discourse organization.
+M9.6 Accuracy Check for Large Sections
+Large-section comparison and generation should be evaluated using the same semantic precision / recall / F1 framework, extended to section-level units.
+Units of comparison
+A section-level evaluation unit may be:
+* a semantic block,
+* a sentence subgraph,
+* a discourse relation,
+* a reference chain,
+* or a complete section-level DAG edge.
+Metrics
+For section-level comparison:
+\text{Precision}_{\text{section}} = \frac{|\text{correct predicted section units}|}{|\text{predicted section units}|}
+\text{Recall}_{\text{section}} = \frac{|\text{correct predicted section units}|}{|\text{gold section units}|}
+F1_{\text{section}} = \frac{2 \cdot P_{\text{section}} \cdot R_{\text{section}}}{P_{\text{section}} + R_{\text{section}}}
+These scores can be computed separately for:
+* structural continuity,
+* reference continuity,
+* logical continuity,
+* and full graph realization.
+
+
+
+M9.7 Practical Execution Modes
+Mode A: Comparison Mode
+Input:
+* two aligned passages or large sections
+Output:
+* similarity scores,
+* mismatched units,
+* and graph-level differences
+Mode B: Reconstruction Mode
+Input:
+* gold semantic graph for a section
+Output:
+* reconstructed text from graph realization
+Mode C: Controlled Generation Mode
+Input:
+* selected semantic blocks and discourse ordering constraints
+Output:
+* generated large-section passage with validation logs
+M9.8 Mass Runner Integration
+This module is designed to work directly with the Mass Generation Runners.
+A mass runner may process:
+* entire passages,
+* multiple paragraphs,
+* chapter-level samples,
+* or aligned bilingual / multilingual sections.
+Pipeline:
+large-section source
+  ↓
+cell splitter
+  ↓
+sentence/block analysis
+  ↓
+section DAG builder
+  ↓
+comparison or generation
+  ↓
+evaluation and export
+Outputs may include:
+* section_results.jsonl
+* section_nodes.csv
+* section_edges.csv
+* section_comparison.json
+* section_generation.json
+* section_eval_summary.json
+
+
+
+M9.9 Example with a Multi-Sentence Section
+Suppose a section contains:
+1. a sentence introducing a taxon,
+2. a sentence describing its morphology,
+3. a sentence making a comparative claim.
+The system should:
+* preserve the taxon as the same entity across sentences,
+* preserve attribute inheritance,
+* preserve comparison scope,
+* and maintain discourse continuity in the section-level graph.
+Thus, if μεγαλόδους appears in sentence 1 and is elaborated in sentences 2–3, the system must track it as a continuous semantic object rather than treating each occurrence independently.
