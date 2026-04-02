@@ -156,21 +156,20 @@ class DAGComposer:
                     token = semantic_tokens[member_idx] if member_idx < len(semantic_tokens) else {}
                     sem_type = token.get('semantic_type', 'UNKNOWN')
                     edge_type = 'PREDICATE'
-                    if member_idx < len(relations) or True:
-                        # Check relation for this clause
-                        if ci < len(relations):
-                            rel = relations[ci]
-                            if rel.get('subject') == member_idx:
-                                edge_type = 'SUBJECT'
-                            elif rel.get('object') == member_idx:
-                                edge_type = 'OBJECT'
-                            elif rel.get('predicate') == member_idx:
-                                edge_type = 'PREDICATE'
-                            elif member_idx in rel.get('modifiers', []):
-                                edge_type = 'MODIFIER'
-                            elif member_idx in rel.get('operators', []):
-                                edge_type = 'CONNECTOR'
-                        elif sem_type == 'FUNCTION':
+                    if ci < len(relations):
+                        rel = relations[ci]
+                        if rel.get('subject') == member_idx:
+                            edge_type = 'SUBJECT'
+                        elif rel.get('object') == member_idx:
+                            edge_type = 'OBJECT'
+                        elif rel.get('predicate') == member_idx:
+                            edge_type = 'PREDICATE'
+                        elif member_idx in rel.get('modifiers', []):
+                            edge_type = 'MODIFIER'
+                        elif member_idx in rel.get('operators', []):
+                            edge_type = 'CONNECTOR'
+                    else:
+                        if sem_type == 'FUNCTION':
                             edge_type = 'DETERMINER'
                         elif sem_type == 'PROPERTY':
                             edge_type = 'MODIFIER'
@@ -192,6 +191,8 @@ class DAGComposer:
                                 edge_type=edge_type,
                             ))
                         except ValueError:
+                            # Edge would create a cycle or references a missing node;
+                            # skip it to keep the DAG well-formed.
                             pass
 
         # If no clauses, attach all lexeme nodes directly to ROOT
