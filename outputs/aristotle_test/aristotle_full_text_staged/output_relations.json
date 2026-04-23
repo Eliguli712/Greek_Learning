@@ -1,0 +1,149 @@
+[
+  {
+    "src": "n47",
+    "dst": "n46",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n76",
+    "dst": "n65",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n119",
+    "dst": "n111",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n136",
+    "dst": "n127",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n140",
+    "dst": "n138",
+    "label": "AGENT",
+    "confidence": 0.7,
+    "rule": "predicate_agent_local"
+  },
+  {
+    "src": "n140",
+    "dst": "n142",
+    "label": "THEME",
+    "confidence": 0.65,
+    "rule": "predicate_theme_local"
+  },
+  {
+    "src": "n217",
+    "dst": "n199",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n239",
+    "dst": "n234",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n239",
+    "dst": "n235",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n254",
+    "dst": "n245",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n298",
+    "dst": "n283",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n350",
+    "dst": "n309",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n350",
+    "dst": "n330",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n350",
+    "dst": "n339",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n371",
+    "dst": "n368",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n405",
+    "dst": "n397",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n453",
+    "dst": "n445",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n487",
+    "dst": "n461",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n501",
+    "dst": "n489",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n519",
+    "dst": "n516",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  },
+  {
+    "src": "n560",
+    "dst": "n559",
+    "label": "MODIFIER",
+    "confidence": 0.6,
+    "rule": "modifier_nearest_entity"
+  }
+]

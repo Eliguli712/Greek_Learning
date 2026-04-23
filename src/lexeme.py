@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 import unicodedata
 
 from src.morpheme import MorphemeAnalysis, MorphemeSegmenter
+from src.similarity_comparator import SimilarityComparator
 
 
 def _strip_accents(text: str) -> str:
@@ -191,6 +192,7 @@ class LexemeNormalizer:
         self.whole_word = dict(merged_lemmas.get("whole_word", {}))
         self.components = dict(merged_lemmas.get("components", {}))
         self.transliteration = dict(merged_translit)
+        self.similarity = SimilarityComparator.from_components(self.components)
 
     def analyze(
         self,
@@ -273,10 +275,26 @@ class LexemeNormalizer:
             elif morpheme.lemma:
                 component_lemmas.append(morpheme.lemma)
 
+        strategy = "component_lookup"
+        confidence = 0.84 if head_entry or head_lemma else 0.55
+
+        # Ambiguity-resolution fallback: when neither the lexicon nor any
+        # segmented morpheme supplies a lemma, rank the token against known
+        # component keys by character n-gram TF-IDF cosine + difflib ratio.
+        if head_entry is None and head_lemma is None and len(self.similarity) > 0:
+            best = self.similarity.best(token)
+            if best is not None:
+                head_entry = best.entry
+                head_lemma = best.lemma
+                strategy = "similarity_fallback"
+                confidence = round(0.45 + 0.4 * best.score, 3)
+                notes.append(
+                    f"similarity fallback matched '{best.key}' (score={round(best.score, 3)})"
+                )
+
         lemma = head_lemma or token
         pos = str(head_entry.get("pos", self._infer_pos(analysis))) if head_entry else self._infer_pos(analysis)
         transliteration = self._transliterate(token, language=language)
-        confidence = 0.84 if head_entry or head_lemma else 0.55
 
         if component_forms:
             notes.append("retained source components alongside the normalized head lemma")

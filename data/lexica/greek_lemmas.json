@@ -1,0 +1,14 @@
+{
+  "components": {
+    "λογ": {
+      "lemma": "λόγος",
+      "pos": "NOUN",
+      "gloss": "word / account / reason"
+    },
+    "θε": {
+      "lemma": "θεός",
+      "pos": "NOUN",
+      "gloss": "god"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "endings": {
+    "ω": {
+      "form": "-ω",
+      "type": "inflectional_ending",
+      "gloss": "1sg.pres.act"
+    },
+    "ει": {
+      "form": "-ει",
+      "type": "inflectional_ending",
+      "gloss": "3sg.pres.act"
+    },
+    "ομεν": {
+      "form": "-ομεν",
+      "type": "inflectional_ending",
+      "gloss": "1pl.pres.act"
+    },
+    "ουσι": {
+      "form": "-ουσι",
+      "type": "inflectional_ending",
+      "gloss": "3pl.pres.act"
+    }
+  },
+  "roots": {
+    "λογ": {
+      "form": "λογ",
+      "type": "root",
+      "gloss": "word / account / reason",
+      "lemma": "λόγος",
+      "pos": "NOUN"
+    },
+    "θε": {
+      "form": "θε",
+      "type": "root",
+      "gloss": "god",
+      "lemma": "θεός",
+      "pos": "NOUN"
+    }
+  }
+}

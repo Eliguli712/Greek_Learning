@@ -1,0 +1,42 @@
+{
+  "description": "Minimal articulatory feature matrix for Ancient Greek graphemes. Feature keys follow common phonological notation (manner, place, voicing, vowel height/backness/length).",
+  "consonants": {
+    "β": {"type": "consonant", "manner": "stop", "place": "bilabial", "voice": "voiced"},
+    "π": {"type": "consonant", "manner": "stop", "place": "bilabial", "voice": "voiceless"},
+    "φ": {"type": "consonant", "manner": "fricative", "place": "labiodental", "voice": "voiceless", "aspirated": true},
+    "μ": {"type": "consonant", "manner": "nasal", "place": "bilabial", "voice": "voiced"},
+    "δ": {"type": "consonant", "manner": "stop", "place": "dental", "voice": "voiced"},
+    "τ": {"type": "consonant", "manner": "stop", "place": "dental", "voice": "voiceless"},
+    "θ": {"type": "consonant", "manner": "fricative", "place": "dental", "voice": "voiceless", "aspirated": true},
+    "ν": {"type": "consonant", "manner": "nasal", "place": "alveolar", "voice": "voiced"},
+    "σ": {"type": "consonant", "manner": "fricative", "place": "alveolar", "voice": "voiceless"},
+    "ς": {"type": "consonant", "manner": "fricative", "place": "alveolar", "voice": "voiceless", "position": "final"},
+    "ζ": {"type": "consonant", "manner": "fricative", "place": "alveolar", "voice": "voiced"},
+    "λ": {"type": "consonant", "manner": "lateral", "place": "alveolar", "voice": "voiced"},
+    "ρ": {"type": "consonant", "manner": "trill", "place": "alveolar", "voice": "voiced"},
+    "γ": {"type": "consonant", "manner": "stop", "place": "velar", "voice": "voiced"},
+    "κ": {"type": "consonant", "manner": "stop", "place": "velar", "voice": "voiceless"},
+    "χ": {"type": "consonant", "manner": "fricative", "place": "velar", "voice": "voiceless", "aspirated": true},
+    "ξ": {"type": "consonant", "manner": "cluster", "segments": ["κ", "σ"]},
+    "ψ": {"type": "consonant", "manner": "cluster", "segments": ["π", "σ"]}
+  },
+  "vowels": {
+    "α": {"type": "vowel", "height": "low",  "backness": "central", "length": "variable"},
+    "ε": {"type": "vowel", "height": "mid",  "backness": "front",   "length": "short"},
+    "η": {"type": "vowel", "height": "mid",  "backness": "front",   "length": "long"},
+    "ι": {"type": "vowel", "height": "high", "backness": "front",   "length": "variable"},
+    "ο": {"type": "vowel", "height": "mid",  "backness": "back",    "length": "short"},
+    "ω": {"type": "vowel", "height": "mid",  "backness": "back",    "length": "long"},
+    "υ": {"type": "vowel", "height": "high", "backness": "front",   "length": "variable", "rounded": true}
+  },
+  "diphthongs": {
+    "αι": {"type": "diphthong", "nucleus": "α", "glide": "ι"},
+    "ει": {"type": "diphthong", "nucleus": "ε", "glide": "ι"},
+    "οι": {"type": "diphthong", "nucleus": "ο", "glide": "ι"},
+    "υι": {"type": "diphthong", "nucleus": "υ", "glide": "ι"},
+    "αυ": {"type": "diphthong", "nucleus": "α", "glide": "υ"},
+    "ευ": {"type": "diphthong", "nucleus": "ε", "glide": "υ"},
+    "ηυ": {"type": "diphthong", "nucleus": "η", "glide": "υ"},
+    "ου": {"type": "diphthong", "nucleus": "ο", "glide": "υ"}
+  }
+}
