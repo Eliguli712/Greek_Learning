@@ -1,1 +1,8 @@
 paper/
+.venv/
+.deps/
+.nltk_data/
+__pycache__/
+*.py[cod]
+outputs/*.json
+outputs/*.jsonl
