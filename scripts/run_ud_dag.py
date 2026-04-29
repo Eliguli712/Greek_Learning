@@ -162,11 +162,23 @@ def build_ud_dags(
             mapped_dependency_count,
             total_considered_dependencies,
         ),
+        "overall_dependency_prf": _conversion_prf(
+            mapped_dependency_count,
+            total_considered_dependencies,
+        ),
         "content_dependency_coverage": _safe_div(
             content_mapped,
             content_mapped + content_unmapped,
         ),
+        "content_dependency_prf": _conversion_prf(
+            content_mapped,
+            content_mapped + content_unmapped,
+        ),
         "predicate_argument_coverage": _safe_div(
+            predicate_argument_mapped,
+            predicate_argument_mapped + predicate_argument_unmapped,
+        ),
+        "predicate_argument_prf": _conversion_prf(
             predicate_argument_mapped,
             predicate_argument_mapped + predicate_argument_unmapped,
         ),
@@ -196,6 +208,18 @@ def _safe_div(numerator: int, denominator: int) -> float:
     if denominator == 0:
         return 0.0
     return round(numerator / denominator, 4)
+
+
+def _conversion_prf(mapped: int, target: int) -> Dict[str, float | int]:
+    precision = 1.0 if mapped else 0.0
+    recall = mapped / target if target else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    return {
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+        "support": target,
+    }
 
 
 def main() -> None:

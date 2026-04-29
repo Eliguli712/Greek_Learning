@@ -339,6 +339,15 @@
       font-weight: 700;
     }
 
+    .compact-table {
+      font-size: 18px;
+    }
+
+    .compact-table th,
+    .compact-table td {
+      padding: 8px 10px;
+    }
+
     .metric {
       color: var(--green);
       font-weight: 700;
@@ -512,7 +521,7 @@
       <li>Data: Universal Dependencies Ancient Greek Perseus and PROIEL test sets</li>
       <li>Total: 2,353 sentences and 31,913 non-punctuation tokens</li>
       <li>Task: convert real UD annotations into this project's semantic DAG format</li>
-      <li>Measured node preservation, annotation retention, dependency coverage, and graph validity</li>
+      <li>Measured conversion precision, recall, and F1 over UD dependency targets</li>
       <li>Evaluation focuses on whether the graph representation preserves the linguistic structure we need</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
@@ -520,44 +529,37 @@
 
   <section class="slide">
     <h2>Real Evaluation Results</h2>
-    <table>
+    <table class="compact-table">
       <thead>
         <tr>
-          <th>Metric</th>
-          <th>Result</th>
+          <th>Target</th>
+          <th>Precision</th>
+          <th>Recall</th>
+          <th>F1</th>
           <th>Meaning</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Node preservation</td>
+          <td>All dependencies</td>
           <td><span class="metric">100%</span></td>
-          <td>Every UD token becomes a DAG node</td>
-        </tr>
-        <tr>
-          <td>Lemma/POS/feature retention</td>
-          <td><span class="metric">100%</span></td>
-          <td>UD annotations are preserved on graph nodes</td>
-        </tr>
-        <tr>
-          <td>Overall dependency coverage</td>
           <td><span class="metric">79.36%</span></td>
-          <td>UD dependencies mapped to semantic DAG edges</td>
+          <td><span class="metric">88.49%</span></td>
+          <td>Full UD dependency inventory</td>
         </tr>
         <tr>
-          <td>Content dependency coverage</td>
-          <td><span class="metric">98.98%</span></td>
-          <td>Coverage after excluding function-marker edges like case, cc, mark, and cop</td>
-        </tr>
-        <tr>
-          <td>Predicate-argument coverage</td>
-          <td><span class="metric">99.96%</span></td>
-          <td>Subjects and objects become AGENT/THEME-style edges</td>
-        </tr>
-        <tr>
-          <td>DAG structural validity</td>
+          <td>Content dependencies</td>
           <td><span class="metric">100%</span></td>
-          <td>Converted graphs pass structural validation</td>
+          <td><span class="metric">98.98%</span></td>
+          <td><span class="metric">99.49%</span></td>
+          <td>Excludes case, cc, mark, cop, and similar function markers</td>
+        </tr>
+        <tr>
+          <td>Predicate arguments</td>
+          <td><span class="metric">100%</span></td>
+          <td><span class="metric">99.96%</span></td>
+          <td><span class="metric">99.98%</span></td>
+          <td>Subjects, objects, and argument obliques</td>
         </tr>
       </tbody>
     </table>
@@ -570,7 +572,7 @@
       <li><strong>Main result:</strong> real Ancient Greek UD annotations can be compiled into a semantic DAG with high content-relation coverage</li>
       <li><strong>Representation:</strong> lemma, POS, morphology, and dependency structure are preserved in one graph object</li>
       <li><strong>Semantic abstraction:</strong> syntactic dependencies are reorganized as AGENT, THEME, MODIFIER, COMPLEMENT, and COORD edges</li>
-      <li><strong>Evaluation:</strong> 98.98% content dependency coverage and 99.96% predicate-argument coverage on real test data</li>
+      <li><strong>Evaluation:</strong> 99.49% content-relation F1 and 99.98% predicate-argument F1 on real test data</li>
       <li><strong>Use case:</strong> the output is inspectable, visualizable, and suitable for downstream graph comparison or analysis</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
