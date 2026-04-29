@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DAG-Based Semantic Analysis for Ancient Greek</title>
+  <title>Semantic DAG Compiler for Ancient Greek</title>
   <style>
     @page {
       size: 10in 7.5in;
@@ -384,10 +384,10 @@
 </head>
 <body>
   <section class="slide">
-    <h1>DAG-Based Semantic Analysis<br>for Ancient Greek</h1>
-    <p class="title-subtitle">An inspectable pipeline from text to semantic graph</p>
+    <h1>Semantic DAG Compiler<br>for Ancient Greek</h1>
+    <p class="title-subtitle">Turning real linguistic annotations into inspectable semantic graphs</p>
     <p class="author">Group 7</p>
-    <p class="group">Evan Liu<br>George Jiang<br>Bennet Wang<br>Haochegn Han</p>
+    <p class="group">Evan Liu<br>George Jiang<br>Bennet Wang<br>Haocheng Han</p>
     <p class="course">Computational Linguistics</p>
   </section>
 
@@ -395,12 +395,12 @@
     <h2>Outline</h2>
     <ul>
       <li>Why Ancient Greek semantic analysis is hard</li>
-      <li>What the system is trying to produce</li>
-      <li>The staged semantic compiler</li>
-      <li>Examples from a small gold set and Aristotle</li>
-      <li>Evaluation, limitations, and next steps</li>
+      <li>What a semantic DAG is meant to represent</li>
+      <li>Prototype raw-text pipeline and its limitation</li>
+      <li>UD-backed DAG compiler over real annotated Greek</li>
+      <li>Real-data evaluation and what it supports</li>
     </ul>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
@@ -411,81 +411,81 @@
       <li>Ancient Greek is morphologically rich, so surface word forms hide useful information</li>
       <li>A graph representation can expose entities, events, semantic roles, and dependencies</li>
     </ul>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
-    <h2>Semantic Analysis Problem</h2>
+    <h2>What We Want To Produce</h2>
     <div class="columns">
       <div>
         <h3>Input</h3>
         <ul class="small-list">
-          <li>Raw Ancient Greek text</li>
-          <li>Accents, punctuation, enclitics, and inflected forms</li>
-          <li>Example source: Aristotle, <em>De Sensu et Sensibilibus</em></li>
+          <li>Ancient Greek tokens</li>
+          <li>Lemmas, POS tags, and morphological features</li>
+          <li>Dependency links from real UD treebanks</li>
         </ul>
       </div>
       <div>
         <h3>Output</h3>
         <ul class="small-list">
-          <li>Normalized lemmas</li>
-          <li>Semantic token types and roles</li>
-          <li>Relations such as AGENT, THEME, and MODIFIER</li>
-          <li>A validated directed acyclic graph</li>
+          <li>One graph node per linguistic token</li>
+          <li>Semantic node types: event, entity, property, connector</li>
+          <li>Semantic edges: AGENT, THEME, MODIFIER, COMPLEMENT, COORD</li>
+          <li>A structurally valid directed acyclic graph</li>
         </ul>
       </div>
     </div>
-    <div class="callout">Goal: make every intermediate layer visible, inspectable, comparable, and evaluable.</div>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <div class="callout">Goal: make predicate-argument structure inspectable as a graph instead of a flat list of tags.</div>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
-    <h2>Types of Outputs</h2>
+    <h2>Two System Paths</h2>
     <ul>
-      <li><strong>Phoneme layer:</strong> syllables and phoneme sequences</li>
-      <li><strong>Morpheme layer:</strong> candidate roots, endings, and features</li>
-      <li><strong>Lexeme layer:</strong> lemma normalization and transliteration</li>
-      <li><strong>Semantic layer:</strong> type, role, and semantic class</li>
-      <li><strong>Relation layer:</strong> extracted semantic edges</li>
-      <li><strong>DAG layer:</strong> graph nodes, edges, and validation report</li>
+      <li><strong>Prototype path:</strong> raw Greek text to phoneme, morpheme, lexeme, semantic token, relation, DAG</li>
+      <li><strong>Problem:</strong> the raw analyzer is too small for real Ancient Greek coverage</li>
+      <li><strong>Evaluated path:</strong> Universal Dependencies annotations to semantic DAG</li>
+      <li><strong>Why this is fair:</strong> it isolates the core contribution: graph representation and conversion</li>
+      <li><strong>Claim:</strong> not raw parsing accuracy; real annotated Greek can be compiled into our DAG format</li>
     </ul>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
-    <h2>Previous Work / Context</h2>
-    <ul>
-      <li>Classical language processing often begins with tokenization, lemmatization, and morphology</li>
-      <li>Semantic parsing often uses graph-like structures to represent events and arguments</li>
-      <li>Rule-based systems can be limited, but they are interpretable and easier to inspect</li>
-      <li>This project focuses on a small transparent compiler rather than an opaque end-to-end model</li>
+    <h2>Previous Work</h2>
+    <ul class="small-list">
+      <li><strong>Universal Dependencies:</strong> cross-linguistically consistent dependency annotation for POS, morphology, and syntax (Nivre et al., 2016)</li>
+      <li><strong>Ancient Greek treebanks:</strong> Perseus-style and PROIEL treebanks provide real Classical/Koine Greek annotations with lemmas, morphology, and dependencies (Bamman &amp; Crane, 2011; Haug &amp; Jøhndal, 2008)</li>
+      <li><strong>Semantic role labeling:</strong> PropBank-style work adds predicate-argument role annotations on top of syntactic structure (Palmer et al., 2005)</li>
+      <li><strong>Semantic graph representations:</strong> AMR represents sentence meaning as graph structure over events, entities, and relations (Banarescu et al., 2013)</li>
+      <li><strong>Our approach:</strong> compile Ancient Greek linguistic annotations into an inspectable semantic DAG with explicit role-labeled edges</li>
     </ul>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
-    <h2>Our Approach</h2>
+    <h2>Evaluated Architecture</h2>
     <div class="pipeline">
-      <div class="stage raw">Raw<br>Greek</div>
-      <div class="stage">Phoneme<br>Layer</div>
-      <div class="stage">Morpheme<br>Layer</div>
-      <div class="stage">Lexeme<br>Layer</div>
-      <div class="stage">Semantic<br>Tokens</div>
-      <div class="stage">Relation<br>Inference</div>
+      <div class="stage raw">UD<br>Tokens</div>
+      <div class="stage">Lemma<br>+ POS</div>
+      <div class="stage">Morphology<br>Features</div>
+      <div class="stage">UD<br>Dependencies</div>
+      <div class="stage">Semantic<br>Node Types</div>
+      <div class="stage">Mapped<br>Edge Labels</div>
       <div class="stage graph">Semantic<br>DAG</div>
       <div class="stage graph">Validation<br>Report</div>
     </div>
-    <p class="arrows">Each layer is saved as structured JSON and consumed by the next layer.</p>
+    <p class="arrows">The adapter preserves UD token information and maps dependency labels into semantic graph edges.</p>
     <ul class="small-list">
-      <li>Exact lexicon lookup is used when possible</li>
-      <li>TF-IDF and difflib similarity provide fallback lemma candidates</li>
-      <li>NetworkX checks graph validity and removes low-confidence cycle edges</li>
+      <li>Node labels preserve lemma, UPOS, morphology, and source token</li>
+      <li>Edges convert syntax into AGENT, THEME, MODIFIER, COMPLEMENT, and COORD</li>
+      <li>NetworkX checks acyclicity, dangling edges, allowed labels, and argument requirements</li>
     </ul>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
-    <h2>Simple Example</h2>
+    <h2>Example DAG</h2>
     <p class="example">θεός γράφει λόγον</p>
     <div class="dag">
       <svg class="dag-svg" viewBox="0 0 822 250" aria-hidden="true">
@@ -503,57 +503,119 @@
       <div class="edge-label agent-label">AGENT</div>
       <div class="edge-label theme-label">THEME</div>
     </div>
-    <p class="callout">The event node points to its semantic arguments, producing a small DAG.</p>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <p class="callout">The event node points to its semantic arguments, turning dependency information into an inspectable predicate-argument graph.</p>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
-    <h2>Aristotle Case Study</h2>
-    <ul>
-      <li>Source: Aristotle, <em>De Sensu et Sensibilibus</em></li>
-      <li>Processed excerpt: 5 sentences, 205 tokens</li>
-      <li>Known lemmas matched: about 90 tokens, roughly 44%</li>
-      <li>Fallback matching handled forms such as ζῴων, ἀναπνοή, νόσος, and αἴσθησις</li>
-      <li>Extracted relation types included AGENT, THEME, and MODIFIER</li>
-      <li>DAG validation succeeded for all processed sentences</li>
-    </ul>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
-  </section>
-
-  <section class="slide">
-    <h2>Evaluation and Conclusion</h2>
+    <h2>UD To DAG Mapping</h2>
     <table>
       <thead>
         <tr>
-          <th>Evaluation</th>
-          <th>Data</th>
-          <th>Result</th>
+          <th>UD Annotation</th>
+          <th>DAG Representation</th>
+          <th>Interpretation</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Gold development set</td>
-          <td>6 short examples</td>
-          <td><span class="metric">100%</span> lemma accuracy, semantic F1, relation F1, DAG validity</td>
+          <td>NOUN / PROPN / PRON</td>
+          <td>entity or indexical node</td>
+          <td>Participants and referents</td>
         </tr>
         <tr>
-          <td>Gold test set</td>
-          <td>4 short examples</td>
-          <td><span class="metric">100%</span> across the same metrics</td>
+          <td>VERB / AUX</td>
+          <td>event node</td>
+          <td>Predicates and eventualities</td>
         </tr>
         <tr>
-          <td>Aristotle excerpt</td>
-          <td>5 sentences / 205 tokens</td>
-          <td><span class="metric">100%</span> DAG validity, but lower relation density</td>
+          <td>nsubj, csubj</td>
+          <td>AGENT edge</td>
+          <td>Subject-like argument of an event</td>
+        </tr>
+        <tr>
+          <td>obj, iobj, obl:arg</td>
+          <td>THEME edge</td>
+          <td>Object or argument affected by an event</td>
+        </tr>
+        <tr>
+          <td>amod, nmod, advmod, det</td>
+          <td>MODIFIER edge</td>
+          <td>Property, nominal, adverbial, or determiner modifier</td>
         </tr>
       </tbody>
     </table>
-    <ul class="small-list">
-      <li><strong>Conclusion:</strong> the compiler works as an inspectable prototype for Ancient Greek semantic graphs</li>
-      <li><strong>Benchmark caveat:</strong> the current gold set is too small; it needs much more annotated data</li>
-      <li><strong>Next steps:</strong> larger lexicon and better modeling of free word order</li>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
+  </section>
+
+  <section class="slide">
+    <h2>Real Evaluation Setup</h2>
+    <ul>
+      <li>Data: Universal Dependencies Ancient Greek Perseus and PROIEL test sets</li>
+      <li>Total: 2,353 sentences and 31,913 non-punctuation tokens</li>
+      <li>Task: convert real UD annotations into this project's semantic DAG format</li>
+      <li>Measured node preservation, annotation retention, dependency coverage, and graph validity</li>
+      <li>This evaluates the DAG compiler, not the raw-text parser prototype</li>
     </ul>
-    <p class="footer">DAG-Based Semantic Analysis for Ancient Greek</p>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
+  </section>
+
+  <section class="slide">
+    <h2>Real Evaluation Results</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Result</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Node preservation</td>
+          <td><span class="metric">100%</span></td>
+          <td>Every UD token becomes a DAG node</td>
+        </tr>
+        <tr>
+          <td>Lemma/POS/feature retention</td>
+          <td><span class="metric">100%</span></td>
+          <td>UD annotations are preserved on graph nodes</td>
+        </tr>
+        <tr>
+          <td>Overall dependency coverage</td>
+          <td><span class="metric">79.36%</span></td>
+          <td>UD dependencies mapped to semantic DAG edges</td>
+        </tr>
+        <tr>
+          <td>Content dependency coverage</td>
+          <td><span class="metric">98.98%</span></td>
+          <td>Coverage after excluding function-marker edges like case, cc, mark, and cop</td>
+        </tr>
+        <tr>
+          <td>Predicate-argument coverage</td>
+          <td><span class="metric">99.96%</span></td>
+          <td>Subjects and objects become AGENT/THEME-style edges</td>
+        </tr>
+        <tr>
+          <td>DAG structural validity</td>
+          <td><span class="metric">100%</span></td>
+          <td>Converted graphs pass structural validation</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
+  </section>
+
+  <section class="slide">
+    <h2>Conclusion and Limitations</h2>
+    <ul>
+      <li><strong>Main result:</strong> real Ancient Greek UD annotations can be compiled into a semantic DAG with high content-relation coverage</li>
+      <li><strong>What works:</strong> graph representation, annotation preservation, semantic edge mapping, and structural validation</li>
+      <li><strong>What does not work yet:</strong> the raw-text phoneme/morpheme/lemma pipeline is too brittle for real parsing</li>
+      <li><strong>Honest claim:</strong> this is a DAG compiler over linguistic annotations, not a complete Ancient Greek parser</li>
+      <li><strong>Next step:</strong> plug in a real parser or lemmatizer before the DAG compiler</li>
+    </ul>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 </body>
 </html>

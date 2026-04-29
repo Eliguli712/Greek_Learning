@@ -38,6 +38,16 @@ Output: JSONL, one compiled result per line.
 
 Output: JSON report with per-stage metrics (lemma accuracy, semantic type F1, relation F1, DAG validity). Current gold metrics: **100% on both sets** (6 dev + 4 test examples).
 
+## Build DAGs from real UD Ancient Greek
+
+```bash
+python scripts/run_ud_dag.py --conllu data/real_eval/grc_perseus-ud-test.conllu --max-sentences 100000 --output outputs/ud_dag_perseus_full.jsonl
+
+python scripts/run_ud_dag.py --conllu data/real_eval/grc_perseus-ud-test.conllu data/real_eval/grc_proiel-ud-test.conllu --max-sentences 100000 --output outputs/ud_dag_combined_full.jsonl
+```
+
+This path uses Universal Dependencies as the upstream annotation source, then maps UD lemmas/POS/features/dependencies into the project's semantic DAG format. It evaluates the DAG abstraction on real annotated Greek rather than relying on the toy raw-text analyzer.
+
 ## Export graphs for visualization
 
 ```powershell
