@@ -472,6 +472,18 @@
   </section>
 
   <section class="slide">
+    <h2>How The DAG Builder Works</h2>
+    <ul>
+      <li><strong>Nodes:</strong> each UD token becomes one graph node with token, lemma, POS, morphology, semantic type, and confidence</li>
+      <li><strong>Edges:</strong> mapped dependencies become directed semantic edges such as AGENT, THEME, MODIFIER, COMPLEMENT, and COORD</li>
+      <li><strong>Indexing:</strong> token positions are converted into stable node IDs such as n0, n1, and n2</li>
+      <li><strong>Cleanup:</strong> duplicate edges, self-loops, and out-of-range links are removed before validation</li>
+      <li><strong>Validation:</strong> NetworkX checks acyclicity, allowed edge labels, valid endpoints, and required predicate arguments</li>
+    </ul>
+    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
+  </section>
+
+  <section class="slide">
     <h2>Example DAG</h2>
     <p class="example">θεός γράφει λόγον</p>
     <div class="dag">
