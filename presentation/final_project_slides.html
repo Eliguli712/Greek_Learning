@@ -189,7 +189,7 @@
       font-weight: 700;
     }
 
-    .stage.raw {
+    .stage.source {
       border-color: var(--blue);
       color: var(--blue);
     }
@@ -403,10 +403,11 @@
   <section class="slide">
     <h2>Outline</h2>
     <ul>
-      <li>Why Ancient Greek semantic analysis is hard</li>
-      <li>What a semantic DAG is meant to represent</li>
-      <li>UD-backed semantic DAG compiler</li>
-      <li>Real-data evaluation and what it supports</li>
+      <li>Motivation and target semantic graph</li>
+      <li>Previous work: UD, Greek treebanks, SRL, and AMR</li>
+      <li>Compiler architecture and DAG builder</li>
+      <li>Example graph representation</li>
+      <li>Manual historical evaluation results</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
@@ -462,7 +463,7 @@
   <section class="slide">
     <h2>Compiler Architecture</h2>
     <div class="pipeline">
-      <div class="stage raw">UD<br>Tokens</div>
+      <div class="stage source">UD<br>Tokens</div>
       <div class="stage">Lemma<br>+ POS</div>
       <div class="stage">Morphology<br>Features</div>
       <div class="stage">UD<br>Dependencies</div>
@@ -555,7 +556,7 @@
   <section class="slide">
     <h2>Conclusion</h2>
     <ul>
-      <li><strong>Main result:</strong> manual historical gold gives 80.14 F1 for full semantic edges and 93.19 F1 for core semantic roles</li>
+      <li><strong>Main result:</strong> manual historical gold scores 80.14 F1 on the full graph and 93.19 F1 on core semantic roles</li>
       <li><strong>Representation:</strong> lemma, POS, morphology, and dependency structure are preserved in one graph object</li>
       <li><strong>Semantic abstraction:</strong> syntactic dependencies are reorganized as AGENT, THEME, MODIFIER, COMPLEMENT, and COORD edges</li>
       <li><strong>Limitation:</strong> modifiers are over-generated, so precision is lower on the complete graph than on core roles</li>
