@@ -48,6 +48,15 @@ python scripts/run_ud_dag.py --conllu data/real_eval/grc_perseus-ud-test.conllu 
 
 This path uses Universal Dependencies as the upstream annotation source, then maps UD lemmas/POS/features/dependencies into the project's semantic DAG format. It evaluates the DAG abstraction on real annotated Greek rather than relying on the toy raw-text analyzer.
 
+## Evaluate Historical Semantic Gold
+
+```bash
+python scripts/evaluate_historical_gold.py
+python scripts/evaluate_historical_gold.py --labels AGENT THEME COMPLEMENT COORD --output /tmp/historical_core_roles.json
+```
+
+The default gold file is `data/gold_semantic/historical_semantic_dags.jsonl`: 21 real Greek sentences from the public PROIEL and Perseus UD test files, manually labeled with this project's semantic DAG edges. The full semantic-graph score is lower than the core-role score because extra predicted edges count as false positives.
+
 ## Export graphs for visualization
 
 ```powershell

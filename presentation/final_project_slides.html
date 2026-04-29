@@ -340,12 +340,12 @@
     }
 
     .compact-table {
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .compact-table th,
     .compact-table td {
-      padding: 8px 10px;
+      padding: 7px 9px;
     }
 
     .metric {
@@ -518,11 +518,11 @@
   <section class="slide">
     <h2>Real Evaluation Setup</h2>
     <ul>
-      <li>Data: Universal Dependencies Ancient Greek Perseus and PROIEL test sets</li>
-      <li>Total: 2,353 sentences and 31,913 non-punctuation tokens</li>
-      <li>Task: convert real UD annotations into this project's semantic DAG format</li>
-      <li>Measured conversion precision, recall, and F1 over UD dependency targets</li>
-      <li>Evaluation focuses on whether the graph representation preserves the linguistic structure we need</li>
+      <li><strong>Manual historical gold:</strong> 21 real Greek sentences from PROIEL and Perseus UD test files</li>
+      <li><strong>Gold labels:</strong> 236 tokens and 122 hand-labeled semantic DAG edges</li>
+      <li><strong>Correctness metric:</strong> exact edge precision, recall, and F1 against human-specified semantic relations</li>
+      <li><strong>Important:</strong> extra predicted edges count as false positives, so this is not just a coverage score</li>
+      <li><strong>UD conversion set:</strong> Perseus + PROIEL test sets, 2,353 sentences and 31,913 non-punctuation tokens</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
@@ -532,44 +532,44 @@
     <table class="compact-table">
       <thead>
         <tr>
-          <th>Target</th>
-          <th>Mapped / Target</th>
-          <th>Coverage</th>
+          <th>Evaluation</th>
+          <th>Data</th>
+          <th>Result</th>
           <th>Meaning</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>All dependencies</td>
-          <td>23,458 / 29,560</td>
-          <td><span class="metric">79.36%</span></td>
-          <td>Full UD dependency inventory</td>
+          <td>Full semantic graph</td>
+          <td>21 historical sentences / 122 gold edges</td>
+          <td><span class="metric">P/R/F1: 68.82 / 95.90 / 80.14</span></td>
+          <td>Exact AGENT, THEME, MODIFIER, COMPLEMENT, and COORD edge match</td>
         </tr>
         <tr>
-          <td>Content dependencies</td>
-          <td>23,458 / 23,700</td>
-          <td><span class="metric">98.98%</span></td>
-          <td>Excludes case, cc, mark, cop, and similar function markers</td>
+          <td>Core semantic roles</td>
+          <td>AGENT, THEME, COMPLEMENT, COORD only</td>
+          <td><span class="metric">P/R/F1: 91.75 / 94.68 / 93.19</span></td>
+          <td>Predicate-argument and clausal structure is the strongest part</td>
         </tr>
         <tr>
-          <td>Predicate arguments</td>
-          <td>5,285 / 5,287</td>
-          <td><span class="metric">99.96%</span></td>
-          <td>Subjects, objects, and argument obliques</td>
+          <td>Main error source</td>
+          <td>MODIFIER edges</td>
+          <td><span class="warning">F1: 55.45</span></td>
+          <td>The compiler over-includes articles, discourse particles, and syntax-only modifiers</td>
         </tr>
       </tbody>
     </table>
-    <p class="callout">These are conversion-coverage scores: how much real UD structure is represented as DAG edges. The total result is 79.36%; the higher rows isolate the semantic relation types this DAG is designed to preserve.</p>
+    <p class="callout">This is the more honest claim: the DAG compiler usually recovers core semantic roles, but the full graph is noisier because modifiers need stricter semantic filtering.</p>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
   <section class="slide">
     <h2>Conclusion</h2>
     <ul>
-      <li><strong>Main result:</strong> real Ancient Greek UD annotations can be compiled into a semantic DAG with high content-relation coverage</li>
+      <li><strong>Main result:</strong> manual historical gold gives 80.14 F1 for full semantic edges and 93.19 F1 for core semantic roles</li>
       <li><strong>Representation:</strong> lemma, POS, morphology, and dependency structure are preserved in one graph object</li>
       <li><strong>Semantic abstraction:</strong> syntactic dependencies are reorganized as AGENT, THEME, MODIFIER, COMPLEMENT, and COORD edges</li>
-      <li><strong>Evaluation:</strong> 79.36% overall dependency coverage, with 98.98% content-relation coverage and 99.96% predicate-argument coverage</li>
+      <li><strong>Honest limitation:</strong> modifiers are over-generated, so precision is lower on the complete graph than on core roles</li>
       <li><strong>Use case:</strong> the output is inspectable, visualizable, and suitable for downstream graph comparison or analysis</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>

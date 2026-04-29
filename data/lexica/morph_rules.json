@@ -22,6 +22,13 @@
     }
   },
   "roots": {
+    "και": {
+      "form": "και",
+      "type": "root",
+      "gloss": "and",
+      "lemma": "καί",
+      "pos": "CONJ"
+    },
     "λογ": {
       "form": "λογ",
       "type": "root",

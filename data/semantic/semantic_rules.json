@@ -52,6 +52,14 @@
       "features": {
         "scalar": true
       }
+    },
+    "καί": {
+      "semantic_type": "connector",
+      "semantic_role": "linker",
+      "semantic_class": "coordination",
+      "features": {
+        "coordination": true
+      }
     }
   }
 }

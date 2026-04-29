@@ -1,5 +1,10 @@
 {
   "components": {
+    "και": {
+      "lemma": "καί",
+      "pos": "CONJ",
+      "gloss": "and"
+    },
     "λογ": {
       "lemma": "λόγος",
       "pos": "NOUN",

@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
+from src.normalize import surface_key
+
 
 @dataclass
 class Relation:
@@ -87,7 +89,9 @@ class RelationPredictor:
         edges: List[Relation] = []
         used: set = set()
 
-        agent_index = self._find_entity(tokens, predicate_index, direction=-1, exclude=used)
+        agent_index = self._find_case_entity(tokens, predicate_index, case="nom", exclude=used)
+        if agent_index is None:
+            agent_index = self._find_entity(tokens, predicate_index, direction=-1, exclude=used)
         if agent_index is None:
             agent_index = self._find_entity(tokens, predicate_index, direction=+1, exclude=used)
         if agent_index is not None:
@@ -102,7 +106,9 @@ class RelationPredictor:
                 )
             )
 
-        theme_index = self._find_entity(tokens, predicate_index, direction=+1, exclude=used)
+        theme_index = self._find_case_entity(tokens, predicate_index, case="acc", exclude=used)
+        if theme_index is None:
+            theme_index = self._find_entity(tokens, predicate_index, direction=+1, exclude=used)
         if theme_index is None:
             theme_index = self._find_entity(tokens, predicate_index, direction=-1, exclude=used)
         if theme_index is not None:
@@ -175,6 +181,43 @@ class RelationPredictor:
     # ------------------------------------------------------------------ #
     # helpers                                                            #
     # ------------------------------------------------------------------ #
+
+    def _find_case_entity(
+        self,
+        tokens: Sequence[Dict[str, Any]],
+        origin: int,
+        case: str,
+        exclude: set,
+    ) -> Optional[int]:
+        candidates: List[int] = []
+        for index, token in enumerate(tokens):
+            if index == origin or index in exclude:
+                continue
+            if token.get("semantic_type") not in {"entity", "indexical"}:
+                continue
+            if self._case_hint(token) == case:
+                candidates.append(index)
+        if not candidates:
+            return None
+        return min(candidates, key=lambda index: abs(index - origin))
+
+    def _case_hint(self, token: Dict[str, Any]) -> Optional[str]:
+        features = token.get("features") or {}
+        ud_features = features.get("ud_features") or {}
+        explicit_case = ud_features.get("Case") or features.get("case")
+        if isinstance(explicit_case, str):
+            value = explicit_case.lower()
+            if value.startswith("nom"):
+                return "nom"
+            if value.startswith("acc"):
+                return "acc"
+
+        key = surface_key(str(token.get("token") or token.get("lemma") or ""))
+        if key.endswith(("ον", "αν", "ην", "ους")):
+            return "acc"
+        if key.endswith(("ος", "ης", "ας", "οι", "αι")):
+            return "nom"
+        return None
 
     def _find_entity(
         self,
