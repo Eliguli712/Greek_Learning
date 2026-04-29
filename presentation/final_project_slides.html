@@ -533,36 +533,33 @@
       <thead>
         <tr>
           <th>Target</th>
-          <th>Precision</th>
-          <th>Recall</th>
-          <th>F1</th>
+          <th>Mapped / Target</th>
+          <th>Coverage</th>
           <th>Meaning</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>All dependencies</td>
-          <td><span class="metric">100%</span></td>
+          <td>23,458 / 29,560</td>
           <td><span class="metric">79.36%</span></td>
-          <td><span class="metric">88.49%</span></td>
           <td>Full UD dependency inventory</td>
         </tr>
         <tr>
           <td>Content dependencies</td>
-          <td><span class="metric">100%</span></td>
+          <td>23,458 / 23,700</td>
           <td><span class="metric">98.98%</span></td>
-          <td><span class="metric">99.49%</span></td>
           <td>Excludes case, cc, mark, cop, and similar function markers</td>
         </tr>
         <tr>
           <td>Predicate arguments</td>
-          <td><span class="metric">100%</span></td>
+          <td>5,285 / 5,287</td>
           <td><span class="metric">99.96%</span></td>
-          <td><span class="metric">99.98%</span></td>
           <td>Subjects, objects, and argument obliques</td>
         </tr>
       </tbody>
     </table>
+    <p class="callout">These are conversion-coverage scores: how much real UD structure is represented as DAG edges. The total result is 79.36%; the higher rows isolate the semantic relation types this DAG is designed to preserve.</p>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
@@ -572,7 +569,7 @@
       <li><strong>Main result:</strong> real Ancient Greek UD annotations can be compiled into a semantic DAG with high content-relation coverage</li>
       <li><strong>Representation:</strong> lemma, POS, morphology, and dependency structure are preserved in one graph object</li>
       <li><strong>Semantic abstraction:</strong> syntactic dependencies are reorganized as AGENT, THEME, MODIFIER, COMPLEMENT, and COORD edges</li>
-      <li><strong>Evaluation:</strong> 99.49% content-relation F1 and 99.98% predicate-argument F1 on real test data</li>
+      <li><strong>Evaluation:</strong> 79.36% overall dependency coverage, with 98.98% content-relation coverage and 99.96% predicate-argument coverage</li>
       <li><strong>Use case:</strong> the output is inspectable, visualizable, and suitable for downstream graph comparison or analysis</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
