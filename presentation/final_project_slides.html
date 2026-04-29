@@ -516,19 +516,8 @@
   </section>
 
   <section class="slide">
-    <h2>Real Evaluation Setup</h2>
-    <ul>
-      <li><strong>Manual historical gold:</strong> 21 real Greek sentences from PROIEL and Perseus UD test files</li>
-      <li><strong>Gold labels:</strong> 236 tokens and 122 hand-labeled semantic DAG edges</li>
-      <li><strong>Correctness metric:</strong> exact edge precision, recall, and F1 against human-specified semantic relations</li>
-      <li><strong>Important:</strong> extra predicted edges count as false positives, so this is not just a coverage score</li>
-      <li><strong>UD conversion set:</strong> Perseus + PROIEL test sets, 2,353 sentences and 31,913 non-punctuation tokens</li>
-    </ul>
-    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
-  </section>
-
-  <section class="slide">
     <h2>Real Evaluation Results</h2>
+    <p class="callout">Manual gold: 21 real PROIEL/Perseus sentences, 236 tokens, 122 semantic edges. Metric: exact edge precision, recall, and F1.</p>
     <table class="compact-table">
       <thead>
         <tr>
@@ -559,7 +548,7 @@
         </tr>
       </tbody>
     </table>
-    <p class="callout">This is the more honest claim: the DAG compiler usually recovers core semantic roles, but the full graph is noisier because modifiers need stricter semantic filtering.</p>
+    <p class="callout">Extra predicted edges count as false positives. Core roles are reliable; modifier filtering is the main source of noise.</p>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
 
@@ -569,8 +558,7 @@
       <li><strong>Main result:</strong> manual historical gold gives 80.14 F1 for full semantic edges and 93.19 F1 for core semantic roles</li>
       <li><strong>Representation:</strong> lemma, POS, morphology, and dependency structure are preserved in one graph object</li>
       <li><strong>Semantic abstraction:</strong> syntactic dependencies are reorganized as AGENT, THEME, MODIFIER, COMPLEMENT, and COORD edges</li>
-      <li><strong>Honest limitation:</strong> modifiers are over-generated, so precision is lower on the complete graph than on core roles</li>
-      <li><strong>Use case:</strong> the output is inspectable, visualizable, and suitable for downstream graph comparison or analysis</li>
+      <li><strong>Limitation:</strong> modifiers are over-generated, so precision is lower on the complete graph than on core roles</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
