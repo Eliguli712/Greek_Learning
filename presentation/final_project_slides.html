@@ -507,47 +507,6 @@
   </section>
 
   <section class="slide">
-    <h2>UD To DAG Mapping</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>UD Annotation</th>
-          <th>DAG Representation</th>
-          <th>Interpretation</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>NOUN / PROPN / PRON</td>
-          <td>entity or indexical node</td>
-          <td>Participants and referents</td>
-        </tr>
-        <tr>
-          <td>VERB / AUX</td>
-          <td>event node</td>
-          <td>Predicates and eventualities</td>
-        </tr>
-        <tr>
-          <td>nsubj, csubj</td>
-          <td>AGENT edge</td>
-          <td>Subject-like argument of an event</td>
-        </tr>
-        <tr>
-          <td>obj, iobj, obl:arg</td>
-          <td>THEME edge</td>
-          <td>Object or argument affected by an event</td>
-        </tr>
-        <tr>
-          <td>amod, nmod, advmod, det</td>
-          <td>MODIFIER edge</td>
-          <td>Property, nominal, adverbial, or determiner modifier</td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
-  </section>
-
-  <section class="slide">
     <h2>Real Evaluation Setup</h2>
     <ul>
       <li>Data: Universal Dependencies Ancient Greek Perseus and PROIEL test sets</li>
