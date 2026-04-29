@@ -396,8 +396,7 @@
     <ul>
       <li>Why Ancient Greek semantic analysis is hard</li>
       <li>What a semantic DAG is meant to represent</li>
-      <li>Prototype raw-text pipeline and its limitation</li>
-      <li>UD-backed DAG compiler over real annotated Greek</li>
+      <li>UD-backed semantic DAG compiler</li>
       <li>Real-data evaluation and what it supports</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
@@ -440,18 +439,6 @@
   </section>
 
   <section class="slide">
-    <h2>Two System Paths</h2>
-    <ul>
-      <li><strong>Prototype path:</strong> raw Greek text to phoneme, morpheme, lexeme, semantic token, relation, DAG</li>
-      <li><strong>Problem:</strong> the raw analyzer is too small for real Ancient Greek coverage</li>
-      <li><strong>Evaluated path:</strong> Universal Dependencies annotations to semantic DAG</li>
-      <li><strong>Why this is fair:</strong> it isolates the core contribution: graph representation and conversion</li>
-      <li><strong>Claim:</strong> not raw parsing accuracy; real annotated Greek can be compiled into our DAG format</li>
-    </ul>
-    <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
-  </section>
-
-  <section class="slide">
     <h2>Previous Work</h2>
     <ul class="small-list">
       <li><strong>Universal Dependencies:</strong> cross-linguistically consistent dependency annotation for POS, morphology, and syntax (Nivre et al., 2016)</li>
@@ -464,7 +451,7 @@
   </section>
 
   <section class="slide">
-    <h2>Evaluated Architecture</h2>
+    <h2>Compiler Architecture</h2>
     <div class="pipeline">
       <div class="stage raw">UD<br>Tokens</div>
       <div class="stage">Lemma<br>+ POS</div>
@@ -555,7 +542,7 @@
       <li>Total: 2,353 sentences and 31,913 non-punctuation tokens</li>
       <li>Task: convert real UD annotations into this project's semantic DAG format</li>
       <li>Measured node preservation, annotation retention, dependency coverage, and graph validity</li>
-      <li>This evaluates the DAG compiler, not the raw-text parser prototype</li>
+      <li>Evaluation focuses on whether the graph representation preserves the linguistic structure we need</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
@@ -607,13 +594,13 @@
   </section>
 
   <section class="slide">
-    <h2>Conclusion and Limitations</h2>
+    <h2>Conclusion</h2>
     <ul>
       <li><strong>Main result:</strong> real Ancient Greek UD annotations can be compiled into a semantic DAG with high content-relation coverage</li>
-      <li><strong>What works:</strong> graph representation, annotation preservation, semantic edge mapping, and structural validation</li>
-      <li><strong>What does not work yet:</strong> the raw-text phoneme/morpheme/lemma pipeline is too brittle for real parsing</li>
-      <li><strong>Honest claim:</strong> this is a DAG compiler over linguistic annotations, not a complete Ancient Greek parser</li>
-      <li><strong>Next step:</strong> plug in a real parser or lemmatizer before the DAG compiler</li>
+      <li><strong>Representation:</strong> lemma, POS, morphology, and dependency structure are preserved in one graph object</li>
+      <li><strong>Semantic abstraction:</strong> syntactic dependencies are reorganized as AGENT, THEME, MODIFIER, COMPLEMENT, and COORD edges</li>
+      <li><strong>Evaluation:</strong> 98.98% content dependency coverage and 99.96% predicate-argument coverage on real test data</li>
+      <li><strong>Use case:</strong> the output is inspectable, visualizable, and suitable for downstream graph comparison or analysis</li>
     </ul>
     <p class="footer">Semantic DAG Compiler for Ancient Greek</p>
   </section>
