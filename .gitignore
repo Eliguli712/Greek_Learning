@@ -1,7 +1,11 @@
-paper/
+paper/*
+!paper/final_project_paper.tex
+!paper/references.bib
+!paper/final_project_paper.pdf
 .venv/
 .deps/
 .nltk_data/
+tools/
 __pycache__/
 *.py[cod]
 outputs/*.json

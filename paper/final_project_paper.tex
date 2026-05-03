@@ -1,0 +1,451 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage[numbers]{natbib}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+}
+
+\singlespacing
+
+\title{Compiling Ancient Greek Semantic DAGs from Universal Dependencies}
+\author{Student Name \\ New York University}
+\date{May 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper presents a compiler that turns morphosyntactic analyses from Ancient
+Greek Universal Dependencies (UD) treebanks into explicit, inspectable, and
+structurally valid semantic graphs. Each sentence is converted into a directed
+acyclic graph (DAG) whose nodes preserve token, lemma, part of speech, and
+morphology, while edges encode a compact semantic inventory:
+\textsc{agent}, \textsc{theme}, \textsc{modifier}, \textsc{complement}, and
+\textsc{coord}. I evaluate the system in two ways. First, on a manually labeled
+historical gold set of 21 real PROIEL and Perseus sentences (236 tokens, 122
+gold semantic edges), the complete graph achieves 68.82 precision, 95.90 recall,
+and 80.14 F1, compared with 19.55 F1 for a local baseline that ignores UD
+dependency edges and predicts semantic relations only from token order, POS, and
+case heuristics. Excluding \textsc{modifier} edges raises the score on core
+semantic roles to 91.75 precision, 94.68 recall, and 93.19 F1, compared with
+22.56 F1 for the same baseline. Second, on the full combined Ancient Greek UD
+test material in the repository (2,353 sentences, 31,913 tokens), the
+compiler preserves all nodes, produces valid DAGs for every sentence, maps
+79.36\% of all non-punctuation dependencies, covers 98.98\% of content
+dependencies, and covers 99.96\% of predicate-argument dependencies. The main
+limitation is semantic over-generation of modifier edges, especially for
+function-like or syntax-only dependents. These results show that UD-backed
+graph compilation can recover a strong semantic role structure for
+Ancient Greek while preserving transparent graph structure and full DAG validity.
+\end{abstract}
+
+\section{Introduction}
+Ancient Greek texts are often accessed through translations, commentaries, and
+lexical notes, but many research questions require explicit structure over the
+original language. A classic example is determining who did what to whom, under
+which conditions, and with what modifiers. Dependency treebanks already provide
+valuable morphosyntactic information for Ancient Greek, but their labels remain
+primarily syntactic. The central question is whether those syntactic analyses can be
+compiled into a more semantic, graph-based layer that remains easy to inspect
+and evaluate.
+
+The system converts UD-annotated sentences into semantic directed acyclic graphs
+(DAGs). Each token becomes one node. Each node preserves the original token
+surface form, lemma, part of speech, and morphological features. Syntactic
+dependency labels are then mapped into a smaller semantic edge inventory:
+\textsc{agent}, \textsc{theme}, \textsc{modifier}, \textsc{complement}, and
+\textsc{coord}. The output is structurally validated with graph checks so that
+the representation is not only interpretable, but also well formed.
+
+The paper makes four concrete contributions: a compact semantic DAG
+representation grounded in real treebank inputs, a compiler from UD annotations
+to that graph inventory, a small manual evaluation set of historical Greek
+sentences labeled directly in the target format, and an empirical evaluation
+that combines baseline comparison with corpus-scale coverage statistics.
+
+\section{Related Work}
+This work sits at the intersection of dependency annotation, classical
+treebanking, semantic role labeling, and semantic graph representations.
+
+Universal Dependencies provides a cross-linguistically consistent framework for
+tokenization, part-of-speech tagging, morphological features, and dependency
+relations \citep{nivre2016ud}. In this setting, UD matters because it supplies a
+stable annotation layer from which semantic abstraction can begin. This makes it
+possible to reorganize syntactic structure into semantic structure while preserving
+the original token-level linguistic information.
+
+For Ancient Greek specifically, existing dependency treebanks make this kind of
+work possible. The Ancient Greek and Latin Dependency Treebanks described by
+\citet{bamman2011agldt} demonstrate the value of large, manually annotated
+classical corpora for linguistic and philological research. The PROIEL project
+\citep{haug2008proiel} extends the treebanking tradition to parallel and
+historical Indo-European texts, including Ancient Greek material that is already
+distributed in UD form. These resources provide the morphosyntactic basis for
+the system input used here.
+
+At the semantic level, the most relevant precedent is semantic role labeling.
+PropBank-style annotation formalizes predicate-argument structure over events and
+their participants \citep{palmer2005propbank}. The system adopts the
+same general intuition that subject, object, and clausal dependencies can often
+be reorganized into semantically meaningful role edges.
+
+The approach is also inspired by graph-based semantic representations such as
+Abstract Meaning Representation (AMR), which represents sentence meaning as a
+graph over events, entities, and relations \citep{banarescu2013amr}. This
+paper takes the same graph-oriented perspective while using a compact inventory
+of node types and role labels tailored to Ancient Greek treebank data.
+
+What distinguishes the present system from the work above is its combination of
+Ancient Greek UD input, a deliberately small semantic label inventory, explicit
+graph validation, and evaluation directly on manually labeled historical Greek
+sentences.
+
+\section{Task Definition and Data}
+\subsection{Task Definition}
+The system input is a sentence with UD-style token-level annotations: surface
+tokens, lemmas, part-of-speech tags, morphological features, and dependency
+links. The output is a semantic DAG in which every token is preserved as a node
+and every retained relation is rewritten into one of five target labels:
+\textsc{agent}, \textsc{theme}, \textsc{modifier}, \textsc{complement}, or
+\textsc{coord}. The task is to compile these token-level annotations into a
+semantic graph.
+
+The graph is intended to support downstream interpretability. A reader should be
+able to inspect the output and recover the main event structure, participant
+roles, modifier attachments, and clausal relationships without consulting the
+original dependency labels. At the same time, the graph should remain
+structurally valid: acyclic, internally consistent, and free of malformed edges.
+
+\subsection{Treebank Inputs}
+The repository includes two public Ancient Greek UD test files used in the
+experiments:
+
+\begin{itemize}
+  \item \texttt{data/real\_eval/grc\_perseus-ud-test.conllu}
+  \item \texttt{data/real\_eval/grc\_proiel-ud-test.conllu}
+\end{itemize}
+
+When converted with the compiler, these files yield 2,353
+sentences and 31,913 non-punctuation tokens. These treebanks provide the
+morphosyntactic analyses from which the semantic DAGs are constructed.
+
+\subsection{Manual Historical Semantic Gold}
+The main semantic evaluation uses
+\texttt{data/gold\_semantic/historical\_semantic\_dags.jsonl}. This file contains
+21 manually labeled historical Greek sentences selected from the PROIEL and
+Perseus UD test materials. The examples total 236 tokens and 122 gold semantic
+edges in the target inventory.
+
+This manual gold set is intentionally content-semantic. It emphasizes event
+participants, complements, coordination, and semantically relevant modifiers.
+Articles, discourse particles, and other purely functional markers are not
+systematically rewarded. That choice is important because a naive syntax-to-graph
+mapping could otherwise inflate scores by reproducing formal syntactic detail
+that does not contribute much to semantic interpretation.
+
+The repository also evaluates a second view of the same manual gold set that
+removes \textsc{modifier} from scoring. In that setting, the remaining core roles
+(\textsc{agent}, \textsc{theme}, \textsc{complement}, and \textsc{coord}) account
+for 94 gold edges. This core-role subset helps isolate whether the system's main
+semantic contribution lies in predicate-argument structure or in broad
+syntax-to-modifier projection.
+
+\section{Methodology}
+\subsection{Node Construction}
+The compiler creates one graph node per retained linguistic token. Each node
+stores the original surface form, lemma, UD part of speech, morphological
+features, a semantic type, a semantic role, and a confidence score. The semantic
+typing scheme is intentionally compact. Nouns and proper nouns typically become
+\emph{entity} nodes, verbs and auxiliaries become \emph{event} nodes, adjectives
+become \emph{property} nodes, adverbs become \emph{manner} nodes, and conjunction
+or linker-like items become \emph{connector} nodes. This inventory is designed
+to support graph inspection, role attachment, and evaluation across real
+historical sentences.
+
+The compiler copies lemma and morphology information directly into the node
+representation. This keeps the graph closely aligned with the source treebank
+annotations and preserves the linguistic details needed for semantic analysis.
+
+\subsection{Dependency-to-Semantic Mapping}
+The core of the system is a rule-based mapping from UD dependency labels into
+the target semantic edge inventory. Table~\ref{tab:mapping} summarizes the
+main mapping decisions.
+
+\begin{table}[t]
+\centering
+\caption{Main mapping from UD dependency labels to semantic DAG labels.}
+\label{tab:mapping}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.0in} >{\raggedright\arraybackslash}p{1.4in} >{\raggedright\arraybackslash}p{2.5in}}
+\toprule
+UD labels & DAG label & Intuition \\
+\midrule
+\texttt{nsubj}, \texttt{csubj}, \texttt{obl:agent} & \textsc{agent} & canonical subjects and agentive obliques \\
+\texttt{obj}, \texttt{iobj}, \texttt{nsubj:pass}, \texttt{csubj:pass}, \texttt{obl:arg} & \textsc{theme} & objects and patient-like arguments \\
+\texttt{xcomp}, \texttt{ccomp}, \texttt{acl}, \texttt{advcl}, \texttt{advcl:cmp}, \texttt{obl} & \textsc{complement} & clausal and oblique complements \\
+\texttt{amod}, \texttt{nmod}, \texttt{nummod}, \texttt{advmod}, \texttt{appos}, \texttt{det} & \textsc{modifier} & attributive, adverbial, or dependent modifiers \\
+\texttt{conj} & \textsc{coord} & coordination between linked conjuncts \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The mapping is intentionally conservative in its label inventory and broad in
+coverage. Many syntactic distinctions are collapsed into a small number of
+readable semantic edge types. The trade-off is that some syntactically valid
+relations, especially modifier-like ones, may become semantically too broad once
+projected into the smaller label space.
+
+Several UD relations are intentionally not treated as semantic edges. In the
+corpus-scale coverage analysis, the largest unmapped relation types are
+\texttt{case}, \texttt{cc}, \texttt{discourse}, \texttt{mark}, and \texttt{cop}.
+These are mostly function markers or structural helpers rather than the central
+content relations the graph is meant to expose. Excluding them makes the graph
+more semantically readable and explains why content-dependency coverage is much
+higher than overall dependency coverage.
+
+\subsection{Graph Building and Validation}
+After node and edge creation, the compiler builds a directed graph with stable
+node identifiers such as \texttt{n0}, \texttt{n1}, and \texttt{n2}. Duplicate
+edges, self-loops, and malformed links are removed before validation. Validation
+checks confirm that edge labels come from the allowed inventory, endpoints are
+valid, and the final graph is acyclic. The implementation also verifies
+predicate-argument well-formedness for required structures and uses
+\texttt{networkx} for cycle detection.
+
+These checks make the output usable as structured data, not just as a readable
+annotation. High local edge accuracy is not enough if the graph as a whole is
+invalid.
+
+\section{Experiments}
+\subsection{Experiment 1: Manual Historical Gold Evaluation}
+The first experiment measures exact edge precision, recall, and F1 on the 21
+manually labeled historical sentences. A predicted edge is counted as correct
+only if its source token, destination token, and label all match the gold edge.
+This metric is strict but appropriate because the output is a graph, not a bag of
+independent labels. The experiment also reports DAG validity rate.
+
+Two systems are compared on this task. The first is the full compiler described
+above, which maps UD dependencies directly into semantic graph edges. The second
+is a deliberately simple baseline. The baseline uses the same UD tokens, lemmas,
+POS tags, and morphological features, but it ignores UD dependency links. It
+instead predicts semantic edges from local word order, POS, and case heuristics
+using the repository's existing linear relation predictor. The comparison asks
+how much the dependency layer contributes beyond a simple local heuristic.
+
+For both systems, two scores are reported. The \emph{full graph} score evaluates
+all five labels. The \emph{core roles} score excludes \textsc{modifier} and
+evaluates only \textsc{agent}, \textsc{theme}, \textsc{complement}, and
+\textsc{coord}. This split is motivated by early inspection of the outputs: the
+compiler appears strong on event structure but less selective about which
+syntactic dependents deserve a semantic modifier edge.
+
+\subsection{Experiment 2: Corpus-Scale UD Conversion}
+The second experiment measures how the compiler behaves when applied to the full
+combined Ancient Greek UD test data in the repository. Here the focus is on
+coverage and robustness over the full converted corpus.
+
+The relevant metrics are:
+\begin{itemize}
+  \item overall dependency coverage: the proportion of non-root,
+  non-punctuation UD dependencies that receive a semantic edge;
+  \item content dependency coverage: the same calculation, but excluding
+  relations such as \texttt{case}, \texttt{cc}, \texttt{mark}, \texttt{cop},
+  \texttt{discourse}, \texttt{aux}, \texttt{fixed}, and \texttt{flat:name};
+  \item predicate-argument coverage: the proportion of subject, object, and
+  argument-like dependencies that are converted into semantic edges;
+  \item DAG validity rate: the proportion of converted sentences whose final
+  graphs pass structural validation.
+\end{itemize}
+
+This experiment asks whether the system scales cleanly to thousands of real
+treebank sentences while preserving the main semantic structure.
+
+\subsection{Reproducibility}
+The main experimental entry points in the repository are
+\texttt{scripts/run\_ud\_dag.py} for corpus-scale conversion and
+\texttt{scripts/evaluate\_historical\_gold.py} for manual semantic evaluation.
+All quantitative results reported below were regenerated locally from those
+scripts inside the cloned project workspace.
+
+\section{Results}
+Table~\ref{tab:historical-results} shows the main comparison between the full
+compiler and the local baseline on the manual historical gold set.
+
+\begin{table}[t]
+\centering
+\caption{Comparison between the full compiler and the local baseline on 21
+Ancient Greek historical sentences.}
+\label{tab:historical-results}
+\begin{tabular}{lrrrr}
+\toprule
+System and setting & Precision & Recall & F1 & Gold edges \\
+\midrule
+Baseline, full graph & 18.06 & 21.31 & 19.55 & 122 \\
+Compiler, full graph & 68.82 & 95.90 & 80.14 & 122 \\
+Baseline, core roles only & 21.78 & 23.40 & 22.56 & 94 \\
+Compiler, core roles only & 91.75 & 94.68 & 93.19 & 94 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The comparison is decisive. On the full graph, the compiler improves from 19.55 F1
+to 80.14 F1. On core semantic roles, it improves from 22.56 F1 to 93.19 F1.
+This gap is large enough that it cannot be explained by minor tuning choices. It
+shows that the UD dependency layer is doing real work for the task, especially
+for event structure and clausal attachment.
+
+The baseline fails most clearly on complements. Because it ignores dependency
+links and relies only on local order and morphology, it never recovers the gold
+\textsc{complement} edges in this evaluation. It also performs weakly on
+\textsc{agent} and \textsc{theme}, and only modestly on \textsc{coord}. This is
+exactly the behavior one would expect from a local heuristic in a language with
+richer morphology and less rigid word order than English.
+
+Table~\ref{tab:label-results} breaks down the full compiler's per-label results
+on the same historical evaluation set.
+
+\begin{table}[t]
+\centering
+\caption{Per-label results for the full compiler on the manual historical gold
+set.}
+\label{tab:label-results}
+\begin{tabular}{lrrrr}
+\toprule
+Label & Precision & Recall & F1 & Gold edges \\
+\midrule
+AGENT & 80.95 & 100.00 & 89.47 & 17 \\
+THEME & 93.33 & 90.32 & 91.80 & 31 \\
+MODIFIER & 38.36 & 100.00 & 55.45 & 28 \\
+COMPLEMENT & 94.59 & 94.59 & 94.59 & 37 \\
+COORD & 100.00 & 100.00 & 100.00 & 9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The strongest result is the compiler's performance on the semantic backbone of
+the sentence. Core roles reach 93.19 F1, with particularly strong performance on
+\textsc{complement} and perfect performance on \textsc{coord} in this sample.
+Both \textsc{agent} and \textsc{theme} also score above 89 F1. These numbers
+support the claim that the system is capturing predicate-argument structure
+reliably once strong upstream syntax is available.
+
+The weaker result is the full-graph score of 80.14 F1. The gap between full
+graph and core roles comes almost entirely from \textsc{modifier}. Modifier
+recall is 100\%, which means the compiler almost never misses a gold semantic
+modifier once one exists. However, modifier precision is only 38.36\%. In other
+words, the system attaches too many dependents as semantic modifiers. This is
+consistent with the system design: a broad set of UD syntactic modifiers is
+collapsed into one semantic label, so purely structural or lightly semantic
+dependents are often over-produced.
+
+Every evaluated historical sentence still yields a valid DAG. The validity rate
+is 100\%, which means the structural layer of the system is robust even when the
+semantic edge inventory is imperfect.
+
+Table~\ref{tab:coverage-results} presents the corpus-scale conversion results on
+the full combined Ancient Greek UD test material.
+
+\begin{table}[t]
+\centering
+\caption{Corpus-scale conversion statistics on the combined Ancient Greek UD
+test files in the repository.}
+\label{tab:coverage-results}
+\begin{tabular}{lrr}
+\toprule
+Metric & Value & Notes \\
+\midrule
+Sentences converted & 2,353 & Perseus + PROIEL test material \\
+Tokens converted & 31,913 & non-punctuation tokens \\
+Mapped dependencies & 23,458 & semantic edges produced \\
+Unmapped dependencies & 6,102 & mostly function markers \\
+Overall dependency coverage & 79.36\% & all non-root, non-punctuation deps \\
+Content dependency coverage & 98.98\% & excluding function-marker relations \\
+Predicate-argument coverage & 99.96\% & subject/object/argument-style deps \\
+DAG validity rate & 100.00\% & all converted graphs valid \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These coverage results sharpen the interpretation of the manual gold numbers.
+The system's lower full-graph precision is not caused by a failure to preserve
+predicate-argument structure. In fact, predicate-argument coverage is essentially
+complete at 99.96\%. Instead, the remaining gap comes from exactly the kinds of
+dependencies the compiler treats cautiously: function markers and broad
+modifier-like relations.
+
+The unmapped dependency counts support that interpretation. The largest unmapped
+categories are \texttt{case} (2,322), \texttt{cc} (1,660), \texttt{discourse}
+(788), \texttt{mark} (580), and \texttt{cop} (490). These are mostly structural
+or functional relations rather than the main semantic relations the system is
+trying to expose. Once such categories are excluded, content dependency coverage
+rises to 98.98\%.
+
+\section{Discussion}
+At its core, the paper addresses a clear technical problem: compiling an existing
+morphosyntactic analysis into a semantic graph for Ancient Greek. The evaluation
+shows that this formulation supports strong predicate-argument recovery,
+transparent graph structure, and reliable large-scale conversion across real
+treebank data.
+
+The strongest outcome is that a compact semantic label inventory is enough to
+recover the predicate-argument backbone of real historical Greek sentences. The
+manual evaluation shows this directly, and the corpus-scale coverage analysis
+supports it from another angle. The graph representation is therefore a useful
+way to expose role structure, clausal structure, and modifier attachment in a
+form that remains easy to inspect and validate.
+
+The main weakness is modifier over-generation. Several design decisions
+contribute to this. First, the mapping groups many syntactically different UD
+relations under one semantic label. Second, the historical gold deliberately
+omits many function-like or low-content modifiers, so a syntactically faithful
+projection can look semantically noisy. Third, Ancient Greek often contains
+particles, determiners, and other dependents whose semantic contribution is
+subtle or context dependent. A single \textsc{modifier} label is too coarse to
+handle all of these cases well.
+
+The main limitations extend beyond modifiers. The manual semantic
+gold set is small, and the system inherits the quality of the upstream UD
+annotations used as input. Even so, the results are strong and consistent. The
+baseline comparison shows that the final compiler captures much more of the
+semantic structure than a local heuristic, and the main remaining error source
+is precise semantic filtering of modifiers rather than event structure itself.
+
+\section{Conclusion and Future Work}
+The paper presents a semantic DAG compiler for Ancient Greek. The system preserves token,
+lemma, part of speech, morphology, and syntactic structure, then reorganizes
+those inputs into a compact semantic graph with explicit role labels. On 21
+manually labeled historical sentences, the compiler reaches 80.14 F1 on the full
+graph and 93.19 F1 on core semantic roles, compared with 19.55 and 22.56 F1 for
+a local baseline that ignores dependency edges. On the full combined UD test
+files in the repository, it converts 2,353 sentences with 100\% DAG validity and
+near complete coverage of predicate-argument dependencies.
+
+Future work should focus on the part of the system that the evaluation exposed as
+fragile: modifier filtering. One direction is to split \textsc{modifier} into a
+finer taxonomy that distinguishes semantic attributes, determiners, discourse
+markers, and syntax-only attachments. Another is to learn a pruning or
+relabeling layer from manually annotated semantic graphs instead of relying on a
+single deterministic projection. A third is to expand the manual gold set so
+that evaluation covers more authors, genres, and clause types. Longer-term work
+could also integrate richer semantic information, such as valency classes,
+animacy, or limited coreference, while preserving the graph validity guarantees
+that made the current system attractive.
+
+The result is a reproducible compiler that turns real Ancient Greek treebank
+analyses into inspectable graph structure.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

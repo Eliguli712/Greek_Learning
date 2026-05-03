@@ -9,6 +9,7 @@ rewarded.
 
 Usage:
     python scripts/evaluate_historical_gold.py
+    python scripts/evaluate_historical_gold.py --system baseline
 """
 
 from __future__ import annotations
@@ -29,10 +30,12 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from src.metrics import set_prf
 from src.ud_adapter import UDSentence, dag_from_ud, read_conllu
+from src.ud_baseline import dag_from_ud_baseline
 
 
 DEFAULT_GOLD = PROJECT_ROOT / "data" / "gold_semantic" / "historical_semantic_dags.jsonl"
 DEFAULT_OUTPUT = PROJECT_ROOT / "outputs" / "historical_semantic_gold_eval.json"
+BASELINE_OUTPUT = PROJECT_ROOT / "outputs" / "historical_semantic_gold_baseline_eval.json"
 DEFAULT_LABELS = ("AGENT", "THEME", "MODIFIER", "COMPLEMENT", "COORD")
 
 
@@ -42,7 +45,13 @@ RelationTuple = Tuple[str, str, str, str]
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gold", type=Path, default=DEFAULT_GOLD)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument(
+        "--system",
+        choices=("compiler", "baseline"),
+        default="compiler",
+        help="Which system to evaluate: the full UD compiler or the simple local baseline.",
+    )
     parser.add_argument(
         "--labels",
         nargs="+",
@@ -66,10 +75,16 @@ def load_jsonl(path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-def evaluate(gold_path: Path, output_path: Path, labels: Sequence[str]) -> Dict[str, Any]:
+def evaluate(
+    gold_path: Path,
+    output_path: Path,
+    labels: Sequence[str],
+    system: str = "compiler",
+) -> Dict[str, Any]:
     examples = load_jsonl(gold_path)
     sentence_cache: Dict[Path, Mapping[str, UDSentence]] = {}
     label_set = set(labels)
+    system_runner = dag_from_ud if system == "compiler" else dag_from_ud_baseline
 
     pred_rel_all: List[RelationTuple] = []
     gold_rel_all: List[RelationTuple] = []
@@ -99,7 +114,7 @@ def evaluate(gold_path: Path, output_path: Path, labels: Sequence[str]) -> Dict[
                 }
             )
 
-        result = dag_from_ud(sentence)
+        result = system_runner(sentence)
         pred_rel = [
             item
             for item in _relations_from_dag_edges(example["id"], result.dag.edges)
@@ -131,6 +146,7 @@ def evaluate(gold_path: Path, output_path: Path, labels: Sequence[str]) -> Dict[
     relation_prf = set_prf(pred_rel_all, gold_rel_all).as_dict()
     report = {
         "gold": str(gold_path),
+        "system": system,
         "labels": list(labels),
         "metrics": {
             "examples": len(examples),
@@ -154,6 +170,7 @@ def evaluate(gold_path: Path, output_path: Path, labels: Sequence[str]) -> Dict[
             "Precision is meaningful here because predicted extra DAG edges count as false positives.",
             "Recall is meaningful here because missing or differently labeled manual semantic edges count as false negatives.",
             "Scores measure UD-backed DAG compilation, not raw Greek parsing from plain text.",
+            "The baseline system ignores UD dependency links and predicts semantic edges from local token order, POS, and case heuristics only.",
         ],
     }
 
@@ -212,7 +229,7 @@ def _print_summary(report: Dict[str, Any], output_path: Path) -> None:
     metrics = report["metrics"]
     relation = metrics["semantic_relation_prf"]
     print("=" * 72)
-    print("Historical manual semantic DAG evaluation")
+    print(f"Historical manual semantic DAG evaluation ({report['system']})")
     print("=" * 72)
     print(f"  examples                   : {metrics['examples']}")
     print(f"  tokens                     : {metrics['tokens']}")
@@ -237,7 +254,10 @@ def _print_summary(report: Dict[str, Any], output_path: Path) -> None:
 
 def main() -> None:
     args = parse_args()
-    evaluate(args.gold, args.output, args.labels)
+    output_path = args.output
+    if output_path is None:
+        output_path = DEFAULT_OUTPUT if args.system == "compiler" else BASELINE_OUTPUT
+    evaluate(args.gold, output_path, args.labels, system=args.system)
 
 
 if __name__ == "__main__":
