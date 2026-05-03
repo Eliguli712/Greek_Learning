@@ -7,7 +7,8 @@ produced it. Edges are expressed as (src_index, dst_index, label, confidence).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.normalize import surface_key
@@ -50,7 +51,33 @@ class RelationPredictor:
         following predicate or entity.
     """
 
+    def __init__(
+        self,
+        project_root: Optional[Path] = None,
+        use_classifier: bool = False,
+    ) -> None:
+        self.classifier = None
+        if use_classifier:
+            from src.relation_classifier import relation_classifier_from_project
+
+            root = Path(project_root or Path(__file__).resolve().parents[1])
+            self.classifier = relation_classifier_from_project(root)
+
     def predict(self, semantic_tokens: Sequence[Dict[str, Any]]) -> List[Relation]:
+        if self.classifier is not None:
+            classified = self.classifier.predict(semantic_tokens)
+            if classified:
+                return [
+                    Relation(
+                        src=item.src,
+                        dst=item.dst,
+                        label=item.label,
+                        confidence=item.confidence,
+                        rule="relation_classifier",
+                    )
+                    for item in classified
+                ]
+
         relations: List[Relation] = []
         n = len(semantic_tokens)
         if n == 0:
@@ -60,9 +87,9 @@ class RelationPredictor:
             stype = token.get("semantic_type")
             srole = token.get("semantic_role")
 
-            if stype == "event":
+            if stype == "event" and not self._is_function_word(token):
                 relations.extend(self._predicate_arguments(i, semantic_tokens))
-            elif srole == "modifier" and stype not in {"event"}:
+            elif srole == "modifier" and stype not in {"event"} and not self._is_function_word(token):
                 edge = self._modifier_attachment(i, semantic_tokens)
                 if edge is not None:
                     relations.append(edge)
@@ -89,28 +116,49 @@ class RelationPredictor:
         edges: List[Relation] = []
         used: set = set()
 
-        agent_index = self._find_case_entity(tokens, predicate_index, case="nom", exclude=used)
-        if agent_index is None:
-            agent_index = self._find_entity(tokens, predicate_index, direction=-1, exclude=used)
-        if agent_index is None:
-            agent_index = self._find_entity(tokens, predicate_index, direction=+1, exclude=used)
-        if agent_index is not None:
-            used.add(agent_index)
-            edges.append(
-                Relation(
-                    src=predicate_index,
-                    dst=agent_index,
-                    label="AGENT",
-                    confidence=0.7,
-                    rule="predicate_agent_local",
+        passive_like = self._is_passive_like(tokens[predicate_index])
+        strict_case = self._has_case_hints(tokens)
+
+        if passive_like:
+            theme_index = self._find_case_entity(tokens, predicate_index, case="nom", exclude=used)
+            if theme_index is not None:
+                used.add(theme_index)
+                edges.append(
+                    Relation(
+                        src=predicate_index,
+                        dst=theme_index,
+                        label="THEME",
+                        confidence=0.72,
+                        rule="predicate_theme_passive_nom",
+                    )
                 )
-            )
+        else:
+            agent_index = self._find_case_entity(tokens, predicate_index, case="nom", exclude=used)
+            if agent_index is None and not strict_case:
+                agent_index = self._find_entity(tokens, predicate_index, direction=-1, exclude=used)
+            if agent_index is None and not strict_case:
+                agent_index = self._find_entity(tokens, predicate_index, direction=+1, exclude=used)
+            if agent_index is not None:
+                used.add(agent_index)
+                edges.append(
+                    Relation(
+                        src=predicate_index,
+                        dst=agent_index,
+                        label="AGENT",
+                        confidence=0.7,
+                        rule="predicate_agent_local",
+                    )
+                )
 
         theme_index = self._find_case_entity(tokens, predicate_index, case="acc", exclude=used)
-        if theme_index is None:
+        if theme_index is None and not strict_case:
             theme_index = self._find_entity(tokens, predicate_index, direction=+1, exclude=used)
-        if theme_index is None:
+        if theme_index is None and not strict_case:
             theme_index = self._find_entity(tokens, predicate_index, direction=-1, exclude=used)
+        if theme_index is None and strict_case and self._allow_short_clause_theme_fallback(tokens, used):
+            theme_index = self._find_entity(tokens, predicate_index, direction=-1, exclude=used)
+            if theme_index is None:
+                theme_index = self._find_entity(tokens, predicate_index, direction=+1, exclude=used)
         if theme_index is not None:
             used.add(theme_index)
             edges.append(
@@ -130,9 +178,15 @@ class RelationPredictor:
         modifier_index: int,
         tokens: Sequence[Dict[str, Any]],
     ) -> Optional[Relation]:
-        target = self._find_entity(tokens, modifier_index, direction=+1, exclude=set())
-        if target is None:
-            target = self._find_entity(tokens, modifier_index, direction=-1, exclude=set())
+        modifier = tokens[modifier_index]
+        if modifier.get("semantic_type") == "manner":
+            target = self._find_event(tokens, modifier_index, direction=-1, exclude=set())
+            if target is None:
+                target = self._find_event(tokens, modifier_index, direction=+1, exclude=set())
+        else:
+            target = self._find_entity(tokens, modifier_index, direction=+1, exclude=set())
+            if target is None:
+                target = self._find_entity(tokens, modifier_index, direction=-1, exclude=set())
         if target is None:
             return None
         return Relation(
@@ -148,9 +202,9 @@ class RelationPredictor:
         connector_index: int,
         tokens: Sequence[Dict[str, Any]],
     ) -> Optional[Relation]:
-        left = connector_index - 1
-        right = connector_index + 1
-        if left < 0 or right >= len(tokens):
+        left = self._find_content(tokens, connector_index, direction=-1)
+        right = self._find_content(tokens, connector_index, direction=+1)
+        if left is None or right is None:
             return None
         return Relation(
             src=left,
@@ -195,6 +249,8 @@ class RelationPredictor:
                 continue
             if token.get("semantic_type") not in {"entity", "indexical"}:
                 continue
+            if self._is_function_word(token):
+                continue
             if self._case_hint(token) == case:
                 candidates.append(index)
         if not candidates:
@@ -230,7 +286,38 @@ class RelationPredictor:
         while 0 <= index < len(tokens):
             if index not in exclude:
                 tok = tokens[index]
-                if tok.get("semantic_type") in {"entity", "indexical"}:
+                if tok.get("semantic_type") in {"entity", "indexical"} and not self._is_function_word(tok):
+                    return index
+            index += direction
+        return None
+
+    def _find_event(
+        self,
+        tokens: Sequence[Dict[str, Any]],
+        origin: int,
+        direction: int,
+        exclude: set,
+    ) -> Optional[int]:
+        index = origin + direction
+        while 0 <= index < len(tokens):
+            if index not in exclude:
+                tok = tokens[index]
+                if tok.get("semantic_type") == "event" and not self._is_function_word(tok):
+                    return index
+            index += direction
+        return None
+
+    def _find_content(
+        self,
+        tokens: Sequence[Dict[str, Any]],
+        origin: int,
+        direction: int,
+    ) -> Optional[int]:
+        index = origin + direction
+        while 0 <= index < len(tokens):
+            tok = tokens[index]
+            if tok.get("semantic_type") not in {"unknown", "operator", "relation", "connector"}:
+                if not self._is_function_word(tok):
                     return index
             index += direction
         return None
@@ -247,6 +334,38 @@ class RelationPredictor:
                 return index
             index += direction
         return None
+
+    def _is_function_word(self, token: Dict[str, Any]) -> bool:
+        features = token.get("features") or {}
+        if features.get("function_word") is True:
+            return True
+        return token.get("pos") in {"DET", "ADP", "CCONJ", "SCONJ", "PART"}
+
+    def _is_passive_like(self, token: Dict[str, Any]) -> bool:
+        features = token.get("features") or {}
+        ud_features = features.get("ud_features") or {}
+        voice = str(ud_features.get("Voice") or features.get("voice") or "").lower()
+        return "pass" in voice
+
+    def _has_case_hints(self, tokens: Sequence[Dict[str, Any]]) -> bool:
+        return any(self._case_hint(token) is not None for token in tokens)
+
+    def _allow_short_clause_theme_fallback(
+        self,
+        tokens: Sequence[Dict[str, Any]],
+        used: set,
+    ) -> bool:
+        if len(tokens) > 4 or not used:
+            return False
+        if any(self._case_hint(token) == "acc" for token in tokens):
+            return False
+        entity_count = sum(
+            1
+            for token in tokens
+            if token.get("semantic_type") in {"entity", "indexical"}
+            and not self._is_function_word(token)
+        )
+        return entity_count <= 2
 
 
 __all__ = ["Relation", "RelationPredictor"]

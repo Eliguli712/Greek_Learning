@@ -66,6 +66,7 @@ class SemanticCompiler:
         self,
         resources: Optional[Mapping[str, Any]] = None,
         project_root: Optional[Path] = None,
+        use_relation_classifier: bool = False,
     ) -> None:
         self.project_root = Path(project_root or Path(__file__).resolve().parents[1])
         self.segmenter = MorphemeSegmenter(resources=resources, project_root=self.project_root)
@@ -80,7 +81,10 @@ class SemanticCompiler:
             segmenter=self.segmenter,
             lexeme_normalizer=self.lexeme_normalizer,
         )
-        self.relation_predictor = RelationPredictor()
+        self.relation_predictor = RelationPredictor(
+            project_root=self.project_root,
+            use_classifier=use_relation_classifier,
+        )
         self.dag_builder = DAGBuilder()
 
     def analyze(self, text: str, language: str = "ancient_greek") -> CompilerResult:

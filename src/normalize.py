@@ -55,12 +55,7 @@ def sentence_split(text: str) -> List[str]:
     try:
         return [s.strip() for s in nltk.sent_tokenize(text) if s.strip()]
     except LookupError:
-        try:
-            nltk.download("punkt", quiet=True)
-            nltk.download("punkt_tab", quiet=True)
-            return [s.strip() for s in nltk.sent_tokenize(text) if s.strip()]
-        except Exception:
-            pass
+        pass
     parts: List[str] = []
     buffer: List[str] = []
     for ch in text:

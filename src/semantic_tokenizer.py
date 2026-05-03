@@ -81,6 +81,40 @@ DEFAULT_SEMANTIC_RULES: Dict[str, Any] = {
                 "denotation": "participant",
             },
         },
+        "PROPN": {
+            "semantic_type": "entity",
+            "semantic_role": "referent",
+            "features": {
+                "interpretable": True,
+                "denotation": "proper_name",
+            },
+        },
+        "DET": {
+            "semantic_type": "indexical",
+            "semantic_role": "referent",
+            "features": {
+                "interpretable": True,
+                "denotation": "determiner",
+                "function_word": True,
+            },
+        },
+        "NUM": {
+            "semantic_type": "entity",
+            "semantic_role": "referent",
+            "features": {
+                "interpretable": True,
+                "denotation": "quantity",
+            },
+        },
+        "AUX": {
+            "semantic_type": "event",
+            "semantic_role": "predicate",
+            "features": {
+                "interpretable": True,
+                "denotation": "auxiliary",
+                "function_word": True,
+            },
+        },
         "ADP": {
             "semantic_type": "relation",
             "semantic_role": "linker",
@@ -97,12 +131,31 @@ DEFAULT_SEMANTIC_RULES: Dict[str, Any] = {
                 "denotation": "coordination",
             },
         },
+        "CCONJ": {
+            "semantic_type": "connector",
+            "semantic_role": "linker",
+            "features": {
+                "interpretable": True,
+                "denotation": "coordination",
+                "function_word": True,
+            },
+        },
+        "SCONJ": {
+            "semantic_type": "connector",
+            "semantic_role": "linker",
+            "features": {
+                "interpretable": True,
+                "denotation": "subordination",
+                "function_word": True,
+            },
+        },
         "PART": {
             "semantic_type": "operator",
             "semantic_role": "scope_marker",
             "features": {
                 "interpretable": True,
                 "denotation": "scope",
+                "function_word": True,
             },
         },
         "X": {
@@ -316,6 +369,7 @@ class SemanticTokenizer:
             dict(pos_rule.get("features", {})),
             dict(lemma_rule.get("features", {})),
         )
+        features = _deep_merge(features, dict(getattr(lex, "features", {}) or {}))
 
         morpheme_roles = self._annotate_morphemes(morph)
         confidence = self._estimate_confidence(lex=lex, morph=morph, lemma_rule=lemma_rule)

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 import unicodedata
 
+from src.corpus_lexicon import CorpusLexicon, corpus_lexicon_from_project
 from src.morpheme import MorphemeAnalysis, MorphemeSegmenter
 from src.similarity_comparator import SimilarityComparator
 
@@ -133,6 +134,7 @@ class LexemeAnalysis:
     transliteration: str
     source_components: List[str] = field(default_factory=list)
     component_lemmas: List[str] = field(default_factory=list)
+    features: Dict[str, Any] = field(default_factory=dict)
     strategy: str = "rule"
     confidence: float = 0.0
     notes: List[str] = field(default_factory=list)
@@ -151,6 +153,8 @@ class LexemeAnalysis:
             payload["source_components"] = self.source_components
         if self.component_lemmas:
             payload["component_lemmas"] = self.component_lemmas
+        if self.features:
+            payload["features"] = self.features
         if self.notes:
             payload["notes"] = self.notes
         return payload
@@ -193,6 +197,7 @@ class LexemeNormalizer:
         self.components = dict(merged_lemmas.get("components", {}))
         self.transliteration = dict(merged_translit)
         self.similarity = SimilarityComparator.from_components(self.components)
+        self.corpus_lexicon: CorpusLexicon = corpus_lexicon_from_project(self.project_root)
 
     def analyze(
         self,
@@ -216,6 +221,9 @@ class LexemeNormalizer:
         analysis = morpheme_analysis or self.segmenter.analyze(normalized_token)
         if key in self.whole_word:
             return self._from_whole_word(normalized_token, analysis, key)
+        corpus_entry = self.corpus_lexicon.get(normalized_token)
+        if corpus_entry is not None:
+            return self._from_corpus_lexicon(normalized_token, analysis, corpus_entry)
         return self._from_components(normalized_token, analysis, language=language)
 
     def _from_whole_word(
@@ -243,6 +251,41 @@ class LexemeNormalizer:
             notes=[
                 "resolved via direct lexeme override",
                 "preserved internal lexical source components for downstream semantic typing",
+            ],
+        )
+
+    def _from_corpus_lexicon(
+        self,
+        token: str,
+        analysis: MorphemeAnalysis,
+        entry: Any,
+    ) -> LexemeAnalysis:
+        transliteration = self._transliterate(token)
+        component_lemmas = [item.lemma for item in analysis.morphemes if item.lemma]
+        features: Dict[str, Any] = {
+            "ud_features": dict(entry.feats),
+            "upos": entry.upos,
+            "corpus_count": entry.count,
+            "lexical_source": entry.source,
+        }
+        if "Case" in entry.feats:
+            features["case"] = entry.feats["Case"].lower()
+
+        return LexemeAnalysis(
+            token=token,
+            lemma=entry.lemma,
+            lexeme=token,
+            canonical_form=transliteration,
+            pos=entry.upos,
+            transliteration=transliteration,
+            source_components=[token],
+            component_lemmas=component_lemmas or [entry.lemma],
+            features=features,
+            strategy="corpus_lexicon",
+            confidence=0.93 if entry.source == "corpus_exact" else 0.68,
+            notes=[
+                f"resolved via local CoNLL-U corpus lexicon ({entry.source})",
+                "carried UD lemma, UPOS, and common morphological features into the raw pipeline",
             ],
         )
 
@@ -308,7 +351,7 @@ class LexemeNormalizer:
             transliteration=transliteration,
             source_components=component_forms,
             component_lemmas=component_lemmas,
-            strategy="component_lookup",
+            strategy=strategy,
             confidence=confidence,
             notes=notes,
         )

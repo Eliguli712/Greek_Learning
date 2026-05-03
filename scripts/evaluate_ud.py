@@ -112,6 +112,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Include per-sentence details in the JSON report.",
     )
+    parser.add_argument(
+        "--use-relation-classifier",
+        action="store_true",
+        help="Use the supervised relation classifier trained from UD train splits.",
+    )
     return parser.parse_args()
 
 
@@ -185,8 +190,12 @@ def evaluate_ud(
     conllu_paths: Sequence[Path],
     max_sentences: int,
     include_sentences: bool = False,
+    use_relation_classifier: bool = False,
 ) -> Dict[str, Any]:
-    compiler = SemanticCompiler(project_root=PROJECT_ROOT)
+    compiler = SemanticCompiler(
+        project_root=PROJECT_ROOT,
+        use_relation_classifier=use_relation_classifier,
+    )
 
     pred_lemmas: List[str] = []
     gold_lemmas: List[str] = []
@@ -295,6 +304,7 @@ def evaluate_ud(
     report: Dict[str, Any] = {
         "inputs": [str(path) for path in conllu_paths],
         "metrics": {
+            "relation_system": "classifier" if use_relation_classifier else "rules",
             "sentences_seen": total_sentences,
             "sentences_aligned": aligned_sentences,
             "sentences_skipped_alignment": skipped_sentences,
@@ -312,6 +322,7 @@ def evaluate_ud(
             "Semantic type is a proxy gold label derived from UD UPOS, not manually annotated semantics.",
             "Relation evaluation maps only common UD deprels into this repo's AGENT/THEME/MODIFIER/COORD inventory.",
             "Sentences with tokenization drift are skipped for token-level metrics.",
+            "When enabled, the relation classifier is trained only from UD train split files under data/ud_treebanks.",
         ],
     }
 
@@ -402,6 +413,7 @@ def main() -> None:
         conllu_paths=args.conllu,
         max_sentences=args.max_sentences,
         include_sentences=args.include_sentences,
+        use_relation_classifier=args.use_relation_classifier,
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
