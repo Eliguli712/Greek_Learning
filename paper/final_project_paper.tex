@@ -144,6 +144,7 @@ morphosyntactic analyses from which the semantic DAGs are constructed.
 \subsection{Manual Historical Semantic Gold}
 The main semantic evaluation uses
 \texttt{data/gold\_semantic/historical\_semantic\_dags.jsonl}. This file contains
+% RISK(HIGH): Manual gold is sampled from the same PROIEL/Perseus test sources used in corpus-scale evaluation; this is in-domain evidence and may overstate out-of-domain generalization.
 21 manually labeled historical Greek sentences selected from the PROIEL and
 Perseus UD test materials. The examples total 236 tokens and 122 gold semantic
 edges in the target inventory.
@@ -275,6 +276,7 @@ treebank sentences while preserving the main semantic structure.
 The main experimental entry points in the repository are
 \texttt{scripts/run\_ud\_dag.py} for corpus-scale conversion and
 \texttt{scripts/evaluate\_historical\_gold.py} for manual semantic evaluation.
+% RISK(HIGH): "Regenerated locally" is not sufficient for full reproducibility; report commit hash, exact commands/flags, Python+package versions, and random seed.
 All quantitative results reported below were regenerated locally from those
 scripts inside the cloned project workspace.
 
