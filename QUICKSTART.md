@@ -6,6 +6,117 @@
 & .\.venv\Scripts\Activate.ps1
 ```
 
+You can also run commands without activation by prefixing them with
+`.\.venv\Scripts\python.exe`.
+
+## Experiment Paths
+
+The project now has three separate evaluation paths. Keep them distinct when
+reporting scores:
+
+| Path | Input | Uses UD dependency edges? | Main command | Current not-raw-pipeline score |
+| --- | --- | --- | --- | --- |
+| Raw toy compiler | Raw text from `data/gold/*.jsonl` | No | `python scripts/evaluate.py --split test` | relation F1 `0.8889` |
+| Historical compiler | UD tokens/POS/morph/dependencies + manual semantic gold | Yes | `python scripts/evaluate_historical_gold.py --system compiler` | full F1 `0.9398` |
+| Historical clean baseline | UD tokens/POS/morph only + manual semantic gold | No | `python scripts/evaluate_historical_gold.py --system baseline` | full F1 `0.6241`, core F1 `0.6400` |
+| Large-scale UD proxy baseline | UD tokens/POS/morph only + UD-derived proxy gold | No | `python scripts/evaluate_ud_baseline.py --system baseline ...` | about `0.40` on held-out/proxy slices |
+| Parser-backed UD proxy | UD tokens/POS/morph/dependencies + UD-derived proxy gold | Yes | `python scripts/evaluate_ud_baseline.py --system compiler ...` | `1.0` sanity check |
+| Raw pipeline UD proxy | Raw UD sentence text through project raw compiler | No UD edges at inference | `python scripts/evaluate_ud.py ...` | around `0.2992` on 200 sentences |
+| Raw pipeline + relation classifier | Raw UD sentence text + classifier trained from UD splits | No dependency edges at inference | `python scripts/train_relation_classifier.py ...` | around `0.3236` on 500 test sentences |
+
+## Reproduce Current Paper-Facing Scores
+
+Historical manual semantic gold, full label set:
+
+```powershell
+python scripts/evaluate_historical_gold.py `
+  --system compiler `
+  --output outputs/historical_semantic_gold_compiler_eval.json
+
+python scripts/evaluate_historical_gold.py `
+  --system baseline `
+  --output outputs/historical_semantic_gold_baseline_eval.json
+```
+
+Historical manual semantic gold, core roles only:
+
+```powershell
+python scripts/evaluate_historical_gold.py `
+  --system compiler `
+  --labels AGENT THEME COMPLEMENT COORD `
+  --output outputs/historical_semantic_gold_compiler_core_eval.json
+
+python scripts/evaluate_historical_gold.py `
+  --system baseline `
+  --labels AGENT THEME COMPLEMENT COORD `
+  --output outputs/historical_semantic_gold_baseline_core_eval.json
+```
+
+Current expected relation F1 on `not-raw-pipeline`:
+
+- compiler full: `0.9398`
+- compiler core: `0.9319`
+- clean baseline full: `0.6241`
+- clean baseline core: `0.6400`
+
+Interpretation:
+
+- `compiler` uses UD dependency edges and is the main UD-backed semantic DAG compiler.
+- `baseline` ignores UD dependency edges. It uses token, lemma, POS, morphology, and linear order only. These are raw-text-derivable from an upstream tagger, but the current historical experiment reads gold UD annotations from CoNLL-U.
+- Full labels are `AGENT THEME MODIFIER COMPLEMENT COORD`.
+- Core labels are `AGENT THEME COMPLEMENT COORD`.
+
+## Large-Scale UD Proxy Checks
+
+Download official UD train/dev/test splits when you need the relation-classifier
+path. The files are ignored by git under `data/ud_treebanks/`.
+
+```powershell
+python scripts/download_ud_treebanks.py
+```
+
+Dependency-free clean baseline against UD-derived proxy gold:
+
+```powershell
+python scripts/evaluate_ud_baseline.py `
+  --system baseline `
+  --conllu data/real_eval/grc_perseus-ud-test.conllu data/real_eval/grc_proiel-ud-test.conllu `
+  --max-sentences 500 `
+  --output outputs/ud_proxy_baseline_500.json
+```
+
+Parser-backed upper-bound sanity check on the same proxy task:
+
+```powershell
+python scripts/evaluate_ud_baseline.py `
+  --system compiler `
+  --conllu data/real_eval/grc_perseus-ud-test.conllu data/real_eval/grc_proiel-ud-test.conllu `
+  --max-sentences 500 `
+  --output outputs/ud_proxy_compiler_500.json
+```
+
+Raw-text pipeline against UD proxy labels:
+
+```powershell
+python scripts/evaluate_ud.py `
+  --conllu data/real_eval/grc_perseus-ud-test.conllu data/real_eval/grc_proiel-ud-test.conllu `
+  --max-sentences 200 `
+  --output outputs/raw_pipeline_ud_eval_200.json
+```
+
+Raw-text pipeline with a supervised relation classifier trained from official
+UD train splits:
+
+```powershell
+python scripts/train_relation_classifier.py `
+  --max-sentences 500 `
+  --output outputs/relation_classifier_report_500.json
+```
+
+The large-scale proxy checks use UD dependency mapping as silver/proxy gold.
+They are useful for scale and sanity, but they are not the same as the manual
+historical semantic gold benchmark.
+
 ## Run end-to-end on a single example
 
 ```powershell
