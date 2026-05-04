@@ -18,7 +18,12 @@ from src.ud_adapter import UDDAGResult, UDSentence, semantic_tokens_from_ud
 def dag_from_ud_baseline(sentence: UDSentence) -> UDDAGResult:
     """Build a semantic DAG baseline from one UD-annotated sentence."""
     semantic_tokens = semantic_tokens_from_ud(sentence, relations=[])
-    relations = RelationPredictor().predict(semantic_tokens)
+    relations = RelationPredictor(
+        filter_discourse_particles=True,
+        infer_baseline_complements=True,
+        suppress_nonfinite_agents=True,
+        enhance_baseline_relations=True,
+    ).predict(semantic_tokens)
     dag = DAGBuilder().build(semantic_tokens, relations)
     return UDDAGResult(
         sentence=sentence,
