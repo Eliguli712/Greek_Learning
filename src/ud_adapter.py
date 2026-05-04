@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import AbstractSet, Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from src.dag import DAGBuilder, SemanticDAG
 from src.normalize import surface_key
@@ -108,6 +108,27 @@ UD_TO_DAG_LABEL: Dict[str, str] = {
     "det": "MODIFIER",
     "obl:agent": "AGENT",
     "conj": "COORD",
+}
+
+
+ARTICLE_LEMMAS = {
+    "\u1f41",  # Greek article ho
+}
+
+
+DISCOURSE_PARTICLE_LEMMAS = {
+    "\u03b4\u03ad",  # de
+    "\u03ba\u03b1\u03af",  # kai
+    "\u03b3\u03ac\u03c1",  # gar
+    "\u1f04\u03bd",  # an
+    "\u1f00\u03bb\u03bb\u03ac",  # alla
+    "\u03bc\u03ad\u03bd",  # men
+}
+
+
+DEFAULT_FILTERED_MODIFIER_LEMMAS: Dict[str, AbstractSet[str]] = {
+    "det": ARTICLE_LEMMAS,
+    "advmod": DISCOURSE_PARTICLE_LEMMAS,
 }
 
 
@@ -311,8 +332,12 @@ def semantic_tokens_from_ud(sentence: UDSentence, relations: Sequence[Relation])
     return semantic_tokens
 
 
-def relations_from_ud(sentence: UDSentence) -> Tuple[List[Relation], List[Dict[str, Any]]]:
+def relations_from_ud(
+    sentence: UDSentence,
+    filtered_modifier_lemmas: Optional[Mapping[str, AbstractSet[str]]] = None,
+) -> Tuple[List[Relation], List[Dict[str, Any]]]:
     """Map selected UD dependencies into this repo's DAG relation inventory."""
+    modifier_filter = DEFAULT_FILTERED_MODIFIER_LEMMAS if filtered_modifier_lemmas is None else filtered_modifier_lemmas
     index_to_position = {token.index: position for position, token in enumerate(sentence.tokens)}
     relations: List[Relation] = []
     unmapped: List[Dict[str, Any]] = []
@@ -338,6 +363,18 @@ def relations_from_ud(sentence: UDSentence) -> Tuple[List[Relation], List[Dict[s
             )
             continue
 
+        if _is_function_like_modifier(token, label, modifier_filter):
+            unmapped.append(
+                {
+                    "dependent": token.form,
+                    "dependent_index": token.index,
+                    "head": token.head,
+                    "deprel": token.deprel,
+                    "reason": "function_like_modifier",
+                }
+            )
+            continue
+
         relations.append(
             Relation(
                 src=src,
@@ -351,9 +388,26 @@ def relations_from_ud(sentence: UDSentence) -> Tuple[List[Relation], List[Dict[s
     return relations, unmapped
 
 
-def dag_from_ud(sentence: UDSentence) -> UDDAGResult:
+def _is_function_like_modifier(
+    token: UDToken,
+    label: str,
+    filtered_modifier_lemmas: Mapping[str, AbstractSet[str]],
+) -> bool:
+    """Skip modifier-like UD edges that are syntax/function markers."""
+    if label != "MODIFIER":
+        return False
+    return token.lemma in filtered_modifier_lemmas.get(token.deprel, set())
+
+
+def dag_from_ud(
+    sentence: UDSentence,
+    filtered_modifier_lemmas: Optional[Mapping[str, AbstractSet[str]]] = None,
+) -> UDDAGResult:
     """Build a semantic DAG from one UD-annotated sentence."""
-    relations, unmapped = relations_from_ud(sentence)
+    relations, unmapped = relations_from_ud(
+        sentence,
+        filtered_modifier_lemmas=filtered_modifier_lemmas,
+    )
     semantic_tokens = semantic_tokens_from_ud(sentence, relations)
     dag = DAGBuilder().build(semantic_tokens, relations)
     return UDDAGResult(
@@ -437,6 +491,9 @@ __all__ = [
     "UDDAGResult",
     "UDSentence",
     "UDToken",
+    "ARTICLE_LEMMAS",
+    "DEFAULT_FILTERED_MODIFIER_LEMMAS",
+    "DISCOURSE_PARTICLE_LEMMAS",
     "UD_TO_DAG_LABEL",
     "UPOS_SEMANTICS",
     "dag_from_ud",

@@ -31,11 +31,13 @@ from src.ud_adapter import UD_TO_DAG_LABEL, dag_from_ud, iter_conllu
 
 
 FUNCTION_MARKER_DEPRELS = {
+    "advmod",  # only unmapped after function-like modifier filtering
     "aux",
     "aux:pass",
     "case",
     "cc",
     "cop",
+    "det",  # only unmapped after function-like modifier filtering
     "discourse",
     "fixed",
     "flat:name",
@@ -191,7 +193,7 @@ def build_ud_dags(
         "notes": [
             "This uses UD gold annotations as upstream input; it is not raw-text parsing.",
             "Coverage measures the share of non-root, non-punctuation UD dependencies mapped into this repo's DAG label inventory.",
-            "Content dependency coverage excludes UD function-marker dependencies such as case, cc, mark, cop, discourse, aux, fixed, and flat:name.",
+            "Content dependency coverage excludes UD function-marker dependencies such as case, cc, mark, cop, discourse, aux, fixed, and flat:name, plus function-like det/advmod instances filtered by the adapter.",
             "Predicate-argument coverage measures subject/object/argument-style UD dependencies mapped into AGENT/THEME-style DAG edges.",
             "Node preservation and lemma/POS/feature retention are 1.0 by construction because the adapter copies UD annotations into DAG nodes.",
             "DAG validity measures structural graph validity after conversion, not linguistic prediction accuracy.",

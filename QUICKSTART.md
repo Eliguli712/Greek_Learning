@@ -57,6 +57,18 @@ python scripts/evaluate_historical_gold.py --labels AGENT THEME COMPLEMENT COORD
 
 The default gold file is `data/gold_semantic/historical_semantic_dags.jsonl`: 21 real Greek sentences from the public PROIEL and Perseus UD test files, manually labeled with this project's semantic DAG edges. The full semantic-graph score is lower than the core-role score because extra predicted edges count as false positives.
 
+## Evaluate Historical Gold with Train/Test Splits
+
+```bash
+# Default: leave one corpus out, train filter choices on the other corpus
+python scripts/evaluate_historical_splits.py
+
+# Alternative: make a deterministic train/test split inside each corpus
+python scripts/evaluate_historical_splits.py --mode within-corpus --test-ratio 0.35
+```
+
+The split evaluator writes one JSON report plus separate train/test JSONL files for each fold under `outputs/historical_semantic_splits/`. Modifier-filter choices are selected from the training fold only, then applied to the held-out test fold.
+
 ## Export graphs for visualization
 
 ```powershell
