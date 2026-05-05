@@ -243,7 +243,7 @@ def _candidate_pairs(length: int, max_distance: int) -> Iterable[Tuple[int, int]
 def _features_from_ud_tokens(tokens: Sequence[UDToken], src: int, dst: int) -> Dict[str, Any]:
     src_token = tokens[src]
     dst_token = tokens[dst]
-    return _pair_features(
+    features = _pair_features(
         src_pos=src_token.upos,
         dst_pos=dst_token.upos,
         src_form=src_token.form,
@@ -261,6 +261,21 @@ def _features_from_ud_tokens(tokens: Sequence[UDToken], src: int, dst: int) -> D
         src=src,
         dst=dst,
     )
+    features.update(
+        _context_features(
+            tokens=tokens,
+            src=src,
+            dst=dst,
+            pos_getter=lambda token: token.upos,
+            lemma_getter=lambda token: token.lemma,
+            form_getter=lambda token: token.form,
+            case_getter=lambda token: token.feats.get("Case", ""),
+            number_getter=lambda token: token.feats.get("Number", ""),
+            gender_getter=lambda token: token.feats.get("Gender", ""),
+            function_getter=lambda token: token.upos in {"DET", "ADP", "CCONJ", "SCONJ", "PART"},
+        )
+    )
+    return features
 
 
 def _features_from_semantic_tokens(
@@ -275,7 +290,7 @@ def _features_from_semantic_tokens(
     src_ud = src_features.get("ud_features") or {}
     dst_ud = dst_features.get("ud_features") or {}
 
-    return _pair_features(
+    features = _pair_features(
         src_pos=str(src_token.get("pos", "")),
         dst_pos=str(dst_token.get("pos", "")),
         src_form=str(src_token.get("token", "")),
@@ -293,6 +308,28 @@ def _features_from_semantic_tokens(
         src=src,
         dst=dst,
     )
+    features.update(
+        _context_features(
+            tokens=tokens,
+            src=src,
+            dst=dst,
+            pos_getter=lambda token: str(token.get("pos", "")),
+            lemma_getter=lambda token: str(token.get("lemma", "")),
+            form_getter=lambda token: str(token.get("token", "")),
+            case_getter=lambda token: str(
+                ((token.get("features") or {}).get("ud_features") or {}).get("Case", "")
+                or (token.get("features") or {}).get("case", "")
+            ),
+            number_getter=lambda token: str(
+                ((token.get("features") or {}).get("ud_features") or {}).get("Number", "")
+            ),
+            gender_getter=lambda token: str(
+                ((token.get("features") or {}).get("ud_features") or {}).get("Gender", "")
+            ),
+            function_getter=_semantic_token_is_function,
+        )
+    )
+    return features
 
 
 def _pair_features(
@@ -348,6 +385,133 @@ def _pair_features(
         "src_is_predicate": src_pos in {"VERB", "AUX"},
         "dst_is_nominal": dst_pos in {"NOUN", "PROPN", "PRON", "DET", "NUM", "ADJ"},
     }
+
+
+def _context_features(
+    *,
+    tokens: Sequence[Any],
+    src: int,
+    dst: int,
+    pos_getter: Any,
+    lemma_getter: Any,
+    form_getter: Any,
+    case_getter: Any,
+    number_getter: Any,
+    gender_getter: Any,
+    function_getter: Any,
+) -> Dict[str, Any]:
+    src_pos = pos_getter(tokens[src])
+    dst_pos = pos_getter(tokens[dst])
+    src_case = case_getter(tokens[src])
+    dst_case = case_getter(tokens[dst])
+    src_number = number_getter(tokens[src])
+    dst_number = number_getter(tokens[dst])
+    src_gender = gender_getter(tokens[src])
+    dst_gender = gender_getter(tokens[dst])
+    lo, hi = sorted((src, dst))
+    between = list(range(lo + 1, hi))
+
+    def pos_at(index: int) -> str:
+        if 0 <= index < len(tokens):
+            return pos_getter(tokens[index])
+        return "BOUNDARY"
+
+    def lemma_at(index: int) -> str:
+        if 0 <= index < len(tokens):
+            return surface_key(lemma_getter(tokens[index]))
+        return "BOUNDARY"
+
+    def form_at(index: int) -> str:
+        if 0 <= index < len(tokens):
+            return surface_key(form_getter(tokens[index]))
+        return "BOUNDARY"
+
+    between_pos = [pos_getter(tokens[index]) for index in between]
+    between_lemmas = {surface_key(lemma_getter(tokens[index])) for index in between}
+    cconj_keys = {"\u03ba\u03b1\u03b9", "\u03c4\u03b5", "\u03b7", "\u03b7\u03b4\u03b5", "\u03bf\u03c5\u03b4\u03b5"}
+
+    nearest_event_left = _nearest_index_with_pos(tokens, dst, -1, {"VERB", "AUX"}, pos_getter)
+    nearest_event_right = _nearest_index_with_pos(tokens, dst, 1, {"VERB", "AUX"}, pos_getter)
+    nearest_nominal_left = _nearest_index_with_pos(
+        tokens,
+        dst,
+        -1,
+        {"NOUN", "PROPN", "PRON", "DET", "NUM", "ADJ"},
+        pos_getter,
+    )
+    nearest_nominal_right = _nearest_index_with_pos(
+        tokens,
+        dst,
+        1,
+        {"NOUN", "PROPN", "PRON", "DET", "NUM", "ADJ"},
+        pos_getter,
+    )
+
+    return {
+        "src_prev_pos": pos_at(src - 1),
+        "src_next_pos": pos_at(src + 1),
+        "dst_prev_pos": pos_at(dst - 1),
+        "dst_next_pos": pos_at(dst + 1),
+        "src_prev_lemma": lemma_at(src - 1),
+        "src_next_lemma": lemma_at(src + 1),
+        "dst_prev_lemma": lemma_at(dst - 1),
+        "dst_next_lemma": lemma_at(dst + 1),
+        "src_prev_suffix_2": form_at(src - 1)[-2:],
+        "dst_prev_suffix_2": form_at(dst - 1)[-2:],
+        "between_len": len(between),
+        "between_bucket": _distance_bucket(len(between)),
+        "between_has_cconj": any(pos == "CCONJ" for pos in between_pos)
+        or bool(between_lemmas & cconj_keys),
+        "between_has_adp": any(pos == "ADP" for pos in between_pos),
+        "between_has_det": any(pos == "DET" for pos in between_pos),
+        "between_has_verb": any(pos in {"VERB", "AUX"} for pos in between_pos),
+        "between_has_particle": any(pos == "PART" for pos in between_pos),
+        "src_is_function": function_getter(tokens[src]),
+        "dst_is_function": function_getter(tokens[dst]),
+        "same_pos": bool(src_pos and src_pos == dst_pos),
+        "same_case": bool(src_case and src_case == dst_case),
+        "same_case_number": bool(src_case and src_case == dst_case and src_number and src_number == dst_number),
+        "same_case_gender_number": bool(
+            src_case
+            and src_case == dst_case
+            and src_number
+            and src_number == dst_number
+            and (not src_gender or not dst_gender or src_gender == dst_gender)
+        ),
+        "dst_prev_is_adp": pos_at(dst - 1) == "ADP",
+        "dst_prev_is_det": pos_at(dst - 1) == "DET",
+        "dst_prev_is_cconj": pos_at(dst - 1) == "CCONJ",
+        "dst_next_is_cconj": pos_at(dst + 1) == "CCONJ",
+        "src_is_nearest_event_left_of_dst": nearest_event_left == src,
+        "src_is_nearest_event_right_of_dst": nearest_event_right == src,
+        "src_is_nearest_nominal_left_of_dst": nearest_nominal_left == src,
+        "src_is_nearest_nominal_right_of_dst": nearest_nominal_right == src,
+        "src_pos_dst_prev_pos": f"{src_pos}->{pos_at(dst - 1)}",
+        "dst_pos_dst_prev_pos": f"{dst_pos}<-{pos_at(dst - 1)}",
+        "src_dst_prev_lemma": f"{surface_key(lemma_getter(tokens[src]))}->{lemma_at(dst - 1)}",
+    }
+
+
+def _nearest_index_with_pos(
+    tokens: Sequence[Any],
+    origin: int,
+    direction: int,
+    allowed_pos: set[str],
+    pos_getter: Any,
+) -> Optional[int]:
+    index = origin + direction
+    while 0 <= index < len(tokens):
+        if pos_getter(tokens[index]) in allowed_pos:
+            return index
+        index += direction
+    return None
+
+
+def _semantic_token_is_function(token: Dict[str, Any]) -> bool:
+    features = token.get("features") or {}
+    if features.get("function_word") is True:
+        return True
+    return token.get("pos") in {"DET", "ADP", "CCONJ", "SCONJ", "PART"}
 
 
 def _distance_bucket(distance: int) -> str:
