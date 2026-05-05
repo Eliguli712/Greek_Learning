@@ -10,3 +10,4 @@ __pycache__/
 *.py[cod]
 outputs/*.json
 outputs/*.jsonl
+/data/ud_treebanks
