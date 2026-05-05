@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from time import perf_counter
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -15,6 +16,8 @@ from src.normalize import surface_key
 
 
 NEGATIVE_LABEL = "NONE"
+ProgressCallback = Callable[[str], None]
+_CLASSIFIER_CACHE: Dict[str, Optional["RelationClassifier"]] = {}
 
 UD_RELATION_MAP: Dict[str, str] = {
     "nsubj": "AGENT",
@@ -101,27 +104,60 @@ class RelationClassifier:
         return relations
 
 
-def relation_classifier_from_project(project_root: Path) -> Optional[RelationClassifier]:
-    return _cached_relation_classifier(str(project_root.resolve()))
+def relation_classifier_from_project(
+    project_root: Path,
+    progress: Optional[ProgressCallback] = None,
+) -> Optional[RelationClassifier]:
+    root = project_root.resolve()
+    cache_key = str(root)
+    if cache_key in _CLASSIFIER_CACHE:
+        _progress(progress, "using cached relation classifier")
+        return _CLASSIFIER_CACHE[cache_key]
+
+    classifier = _build_relation_classifier(root, progress)
+    _CLASSIFIER_CACHE[cache_key] = classifier
+    return classifier
 
 
-@lru_cache(maxsize=4)
-def _cached_relation_classifier(project_root: str) -> Optional[RelationClassifier]:
-    root = Path(project_root)
+def _build_relation_classifier(
+    root: Path,
+    progress: Optional[ProgressCallback] = None,
+) -> Optional[RelationClassifier]:
     train_paths = sorted((root / "data" / "ud_treebanks").glob("*-train.conllu"))
     if not train_paths:
+        _progress(progress, "no UD train files found under data/ud_treebanks")
         return None
 
+    _progress(
+        progress,
+        "loading UD train files: " + ", ".join(path.name for path in train_paths),
+    )
     train_sentences: List[UDSentence] = []
-    for path in train_paths:
-        train_sentences.extend(_read_conllu(path))
+    for index, path in enumerate(train_paths, start=1):
+        sentences = _read_conllu(path)
+        train_sentences.extend(sentences)
+        token_count = sum(len(sentence.tokens) for sentence in sentences)
+        _progress(
+            progress,
+            f"loaded train file {index}/{len(train_paths)} {path.name}: "
+            f"{len(sentences)} sentences, {token_count} tokens",
+        )
 
     if not train_sentences:
+        _progress(progress, "no usable UD train sentences found")
         return None
 
-    features, labels = _training_rows(train_sentences)
+    _progress(progress, f"building training rows from {len(train_sentences)} train sentences")
+    features, labels = _training_rows(train_sentences, progress=progress)
     if not features or len(set(labels)) < 2:
+        _progress(progress, "not enough label variety to train relation classifier")
         return None
+
+    label_counts = Counter(labels)
+    label_summary = ", ".join(
+        f"{label}={count}" for label, count in sorted(label_counts.items())
+    )
+    _progress(progress, f"built {len(features)} candidate rows ({label_summary})")
 
     model = Pipeline(
         [
@@ -132,19 +168,28 @@ def _cached_relation_classifier(project_root: str) -> Optional[RelationClassifie
                     max_iter=300,
                     solver="lbfgs",
                     random_state=13,
+                    verbose=1 if progress is not None else 0,
                 ),
             ),
         ]
     )
+    _progress(progress, "fitting sklearn LogisticRegression(max_iter=300, solver=lbfgs)")
+    fit_started = perf_counter()
     model.fit(features, labels)
+    _progress(progress, f"fit complete in {_elapsed(fit_started)}")
     return RelationClassifier(model=model, threshold=0.15)
 
 
-def _training_rows(sentences: Sequence[UDSentence]) -> Tuple[List[Dict[str, Any]], List[str]]:
+def _training_rows(
+    sentences: Sequence[UDSentence],
+    progress: Optional[ProgressCallback] = None,
+) -> Tuple[List[Dict[str, Any]], List[str]]:
     features: List[Dict[str, Any]] = []
     labels: List[str] = []
+    total = len(sentences)
+    progress_interval = max(1, total // 10)
 
-    for sentence in sentences:
+    for sentence_index, sentence in enumerate(sentences, start=1):
         index_to_position = {token.index: pos for pos, token in enumerate(sentence.tokens)}
         positive: Dict[Tuple[int, int], str] = {}
         for dep_pos, token in enumerate(sentence.tokens):
@@ -168,7 +213,23 @@ def _training_rows(sentences: Sequence[UDSentence]) -> Tuple[List[Dict[str, Any]
             features.append(_features_from_ud_tokens(sentence.tokens, src, dst))
             labels.append(label)
 
+        if sentence_index == total or sentence_index % progress_interval == 0:
+            _progress(
+                progress,
+                f"feature extraction: {sentence_index}/{total} train sentences, "
+                f"{len(features)} rows so far",
+            )
+
     return features, labels
+
+
+def _progress(callback: Optional[ProgressCallback], message: str) -> None:
+    if callback is not None:
+        callback(message)
+
+
+def _elapsed(started: float) -> str:
+    return f"{perf_counter() - started:.1f}s"
 
 
 def _read_conllu(path: Path) -> List[UDSentence]:

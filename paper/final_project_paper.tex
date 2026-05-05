@@ -1,28 +1,24 @@
 \documentclass[11pt]{article}
 
-\usepackage[margin=1in]{geometry}
+% Change "review" to "final" to generate the final camera-ready version.
+\usepackage[review]{acl}
+
+% Standard ACL package includes.
+\usepackage{times}
+\usepackage{latexsym}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{lmodern}
-\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{amsmath}
-\usepackage{hyperref}
-\usepackage[numbers]{natbib}
-
-\hypersetup{
-  colorlinks=true,
-  linkcolor=black,
-  citecolor=black,
-  urlcolor=blue
-}
-
-\singlespacing
+\usepackage{placeins}
 
 \title{A Layered Semantic DAG Compiler for Ancient Greek}
-\author{Student Name \\ New York University}
-\date{May 2026}
+\author{Student Name \\
+  New York University}
 
 \begin{document}
 \maketitle
@@ -38,8 +34,8 @@ information and whose edges use a compact semantic inventory:
 \textsc{coord}. I evaluate the same graph representation under three levels of
 upstream support. In the fully raw-text setting, a supervised relation classifier
 trained from official UD train splits reaches 85.89 lemma accuracy, 84.09 UPOS
-accuracy, 86.25 proxy semantic-type accuracy, and 36.18 relation F1 on 200
-held-out UD-proxy test sentences. In a dependency-free UD-token setting, where
+accuracy, 86.25 proxy semantic-type accuracy, and 36.18 relation F1 on a
+200-sentence held-out Perseus UD-proxy slice. In a dependency-free UD-token setting, where
 gold UD tokens, lemmas, POS tags, and morphology are available but dependency
 edges are hidden, the system reaches 62.41 F1 on a manually labeled historical
 semantic gold set. In the UD-backed setting, where dependency edges are also
@@ -154,9 +150,11 @@ E \subseteq V \times V \times \mathcal{L}.
 \]
 The label inventory is
 \[
-\mathcal{L} =
-\{\textsc{agent},\textsc{theme},\textsc{modifier},
-\textsc{complement},\textsc{coord}\}.
+\begin{aligned}
+\mathcal{L} = \{&
+\textsc{agent}, \textsc{theme}, \textsc{modifier},\\
+&\textsc{complement}, \textsc{coord}\}.
+\end{aligned}
 \]
 An edge \((v_i,v_j,\ell)\) means that token \(i\) is the semantic head of token
 \(j\) under relation label \(\ell\).
@@ -200,8 +198,10 @@ The repository includes two public Ancient Greek UD test files used in the
 experiments:
 
 \begin{itemize}
-  \item \texttt{data/real\_eval/grc\_perseus-ud-test.conllu}
-  \item \texttt{data/real\_eval/grc\_proiel-ud-test.conllu}
+  \item \texttt{data/real\_eval/}\\
+  \texttt{grc\_perseus-ud-test.conllu}
+  \item \texttt{data/real\_eval/}\\
+  \texttt{grc\_proiel-ud-test.conllu}
 \end{itemize}
 
 When converted with the compiler, these files yield 2,353
@@ -216,7 +216,8 @@ threshold on the dev split, and reports held-out performance on the test split.
 
 \subsection{Manual Historical Semantic Gold}
 The main semantic evaluation uses
-\texttt{data/gold\_semantic/historical\_semantic\_dags.jsonl}. This file contains
+\texttt{data/gold\_semantic/}\\
+\texttt{historical\_semantic\_dags.jsonl}. This file contains
 21 manually labeled historical Greek sentences selected from the PROIEL and
 Perseus UD test materials. The examples total 236 tokens and 122 gold semantic
 edges in the target inventory.
@@ -272,8 +273,10 @@ At inference time, for each dependent \(j\), the classifier keeps the highest
 scoring non-\textsc{none} head-label pair if its score exceeds a tuned threshold:
 \[
 (\hat{i},\hat{\ell}) =
-\arg\max_{i,\ell \in \mathcal{L}} p(\ell \mid i,j,x),
-\qquad
+\arg\max_{i,\ell \in \mathcal{L}}
+p(\ell \mid i,j,x),
+\]
+\[
 p(\hat{\ell}\mid \hat{i},j,x) \geq \tau.
 \]
 The latest version adds contextual pair features: neighboring POS and lemma
@@ -290,11 +293,11 @@ UD token-level annotations into the semantic-token schema, and maps selected UD
 dependency labels into the target semantic edge inventory. Table~\ref{tab:mapping}
 summarizes the main mapping decisions.
 
-\begin{table}[t]
+\begin{table*}[!t]
 \centering
 \caption{Main mapping from UD dependency labels to semantic DAG labels.}
 \label{tab:mapping}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.0in} >{\raggedright\arraybackslash}p{1.4in} >{\raggedright\arraybackslash}p{2.5in}}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}p{0.45\textwidth}}
 \toprule
 UD labels & DAG label & Intuition \\
 \midrule
@@ -305,7 +308,7 @@ UD labels & DAG label & Intuition \\
 \texttt{conj} & \textsc{coord} & coordination between linked conjuncts \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 The mapping is intentionally conservative in its label inventory and broad in
 coverage. Many syntactic distinctions are collapsed into a small number of
@@ -344,8 +347,15 @@ semantic-relation gold. No UD dependency edges are given to the raw pipeline at
 inference time.
 
 The relation classifier is trained from official UD train splits, thresholded on
-official dev splits, and evaluated on held-out test splits. This experiment is
-closest to the proposal's fully automatic end-to-end setting.
+official dev splits, and evaluated on held-out test data. The reported
+200-sentence run processes the test files in fixed order and exhausts the
+sentence budget on \texttt{grc\_perseus-ud-test.conllu}; it should therefore be
+read as a held-out Perseus UD-proxy slice rather than as a balanced full-treebank
+score. The raw proxy relation metric also covers only the currently mapped
+UD-derived labels \textsc{agent}, \textsc{theme}, \textsc{modifier}, and
+\textsc{coord}; \textsc{complement} is evaluated in the manual semantic and
+UD-backed settings below. This experiment is closest to the proposal's fully
+automatic end-to-end setting, but its relation target is still a UD-derived proxy.
 
 \subsection{Experiment 2: Manual Historical Semantic Gold}
 The second experiment measures exact edge precision, recall, and F1 on the 21
@@ -396,38 +406,45 @@ This experiment asks whether the system scales cleanly to thousands of real
 treebank sentences while preserving the main semantic structure.
 
 \subsection{Reproducibility}
-The main experimental entry points in the repository are
-\texttt{scripts/train\_relation\_classifier.py} for the raw classifier,
-\texttt{scripts/evaluate\_historical\_gold.py} for manual semantic evaluation,
-\texttt{scripts/evaluate\_historical\_splits.py} for corpus-aware historical
-splits, and \texttt{scripts/run\_ud\_dag.py} for corpus-scale conversion.
+The main experimental entry points in the repository are:
+\begin{itemize}
+  \item \texttt{scripts/train\_relation\_classifier.py} for the raw classifier;
+  \item \texttt{scripts/evaluate\_historical\_gold.py} for manual semantic evaluation;
+  \item \texttt{scripts/evaluate\_historical\_splits.py} for corpus-aware splits;
+  \item \texttt{scripts/run\_ud\_dag.py} for corpus-scale conversion.
+\end{itemize}
 All quantitative results reported below were regenerated locally from those
-scripts inside the cloned project workspace.
+scripts inside the cloned project workspace. The raw classifier result in
+Table~\ref{tab:settings-results} comes from
+\texttt{python scripts/train\_relation\_classifier.py --max-sentences 200
+--output outputs/review\_relation\_classifier\_200.json}. That run selected
+\(\tau=0.45\) on the dev split and reported 33.70 precision, 39.05 recall, and
+36.18 F1 on the held-out test slice.
 
 \section{Results}
+\subsection{Overall Comparison}
 Table~\ref{tab:settings-results} summarizes the three main experimental
 settings. The important point is that these are not interchangeable scores:
 they use the same final semantic DAG representation, but they differ in how much
 upstream linguistic structure is available.
 
-\begin{table}[t]
+\begin{table*}[!t]
 \centering
 \caption{Main results across upstream-support settings.}
 \label{tab:settings-results}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.3in}rrrr}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.46\textwidth}rrrr}
 \toprule
 Setting & Precision & Recall & F1 & Support \\
 \midrule
-Raw text + classifier, UD-proxy test & 33.70 & 39.05 & 36.18 & 1,091 \\
+Raw text + classifier, Perseus UD-proxy slice & 33.70 & 39.05 & 36.18 & 1,091 \\
 Dependency-free UD-token baseline, manual gold & 55.00 & 72.13 & 62.41 & 122 \\
 UD-backed compiler, manual gold & 92.13 & 95.90 & 93.98 & 122 \\
 UD-backed compiler, leave-one-corpus-out & 92.45 & 95.89 & 94.14 & 122 \\
 \bottomrule
 \end{tabular}
-\end{table}
-
+\end{table*}
 The raw pipeline result is the most honest measure of the fully automatic
-system. It reaches 36.18 relation F1 on held-out UD-proxy test data. The same
+system. It reaches 36.18 relation F1 on the held-out Perseus UD-proxy slice. The same
 run reports 85.89 lemma accuracy, 84.09 UPOS accuracy, and 86.25 proxy
 semantic-type accuracy. This shows that the upstream lexical and semantic-token
 layers are usable, while relation induction remains much harder.
@@ -438,15 +455,16 @@ tags, and morphology are provided. However, it still withholds UD dependency
 edges. The gap between 62.41 and 93.98 F1 therefore measures how much reliable
 dependency structure contributes to semantic graph construction.
 
+\subsection{Manual Historical Semantic Gold}
 Table~\ref{tab:historical-results} gives the full and core-role comparison on
 the manual historical gold set.
 
-\begin{table}[t]
+\begin{table*}[!t]
 \centering
 \caption{Manual historical semantic gold results on 21 Ancient Greek
 sentences.}
 \label{tab:historical-results}
-\begin{tabular}{lrrrr}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.44\textwidth}rrrr}
 \toprule
 System and setting & Precision & Recall & F1 & Gold edges \\
 \midrule
@@ -456,17 +474,17 @@ Dependency-free baseline, core roles only & 54.96 & 76.60 & 64.00 & 94 \\
 UD-backed compiler, core roles only & 91.75 & 94.68 & 93.19 & 94 \\
 \bottomrule
 \end{tabular}
-\end{table}
-
+\end{table*}
 The comparison is decisive. On the full graph, the UD-backed compiler improves
 over the dependency-free baseline by 31.57 F1 points. On core roles, it improves
 by 29.19 F1 points. This gap shows that the dependency layer is doing real work,
 especially for long-distance event structure and clausal attachment.
 
+\subsection{Per-Label Breakdown}
 Table~\ref{tab:label-results} breaks down the UD-backed compiler's per-label
 results on the same historical evaluation set.
 
-\begin{table}[t]
+\begin{table*}[!t]
 \centering
 \caption{Per-label results for the full compiler on the manual historical gold
 set.}
@@ -482,8 +500,7 @@ COMPLEMENT & 94.59 & 94.59 & 94.59 & 37 \\
 COORD & 100.00 & 100.00 & 100.00 & 9 \\
 \bottomrule
 \end{tabular}
-\end{table}
-
+\end{table*}
 The strongest result is the compiler's performance on the semantic backbone of
 the sentence. Core roles reach 93.19 F1, with particularly strong performance on
 \textsc{complement} and perfect performance on \textsc{coord} in this sample.
@@ -495,20 +512,22 @@ Every evaluated historical sentence still yields a valid DAG. The validity rate
 is 100\%, which means the structural layer of the system is robust even when the
 semantic edge inventory is imperfect.
 
+\subsection{Corpus-Aware Historical Split}
 The leave-one-corpus-out experiment gives a macro test score of 94.14 F1. The
 held-out Perseus fold scores 94.85 F1, and the held-out PROIEL fold scores 93.42
 F1. This suggests that the manual-gold improvement is not only an artifact of
 tuning filter choices on the same examples being evaluated.
 
+\subsection{Corpus-Scale Conversion}
 Table~\ref{tab:coverage-results} presents the corpus-scale conversion results on
 the full combined Ancient Greek UD test material.
 
-\begin{table}[t]
+\begin{table*}[!t]
 \centering
 \caption{Corpus-scale conversion statistics on the combined Ancient Greek UD
 test files in the repository.}
 \label{tab:coverage-results}
-\begin{tabular}{lrr}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.36\textwidth}r>{\raggedright\arraybackslash}p{0.38\textwidth}}
 \toprule
 Metric & Value & Notes \\
 \midrule
@@ -522,12 +541,12 @@ Predicate-argument coverage & 99.96\% & subject/object/argument-style deps \\
 DAG validity rate & 100.00\% & all converted graphs valid \\
 \bottomrule
 \end{tabular}
-\end{table}
-
-These coverage results sharpen the interpretation of the manual gold numbers.
-The system's UD-backed strength is not caused by a tiny hand-built example set:
-the same adapter scales to thousands of real treebank sentences while preserving
-nodes, retaining content dependencies, and producing structurally valid DAGs.
+\end{table*}
+These coverage results provide a separate scale and robustness check for the
+UD-backed adapter. They do not replace manual semantic evaluation, but they show
+that the same adapter scales to thousands of real treebank sentences while
+preserving nodes, retaining content dependencies, and producing structurally
+valid DAGs.
 
 The unmapped dependency counts support that interpretation. The largest unmapped
 categories are \texttt{case} (2,322), \texttt{cc} (1,660), \texttt{discourse}
@@ -535,6 +554,7 @@ categories are \texttt{case} (2,322), \texttt{cc} (1,660), \texttt{discourse}
 or functional relations rather than the main semantic relations the system is
 trying to expose. Once such categories are excluded, content dependency coverage
 rises to 98.98\%.
+\FloatBarrier
 
 \section{Discussion}
 The most important result is the separation between representation quality and
@@ -564,13 +584,6 @@ fully automatic raw text, dependency-free lexical/morphological support, and
 parser-backed UD support. This matches the proposal's goal of a modular,
 inspectable, scoreable pipeline.
 
-The main limitations are the small manual semantic gold set and the dependence
-of the highest-scoring setting on upstream UD annotations. The raw classifier is
-also still simple: it predicts pairwise edges with local context rather than
-performing global structured decoding. A more realistic raw parser would likely
-need a two-stage architecture that first decides whether a token should attach
-semantically, then selects the best head under graph-level constraints.
-
 \section{Conclusion and Future Work}
 The paper presents a layered semantic DAG compiler for Ancient Greek. The system
 follows the proposal's modular design: raw text can pass through explicit
@@ -598,7 +611,17 @@ raw pipeline is functional but still relation-limited, and the UD-backed
 semantic DAG layer demonstrates that the proposed graph representation can
 faithfully encode real historical Greek structure.
 
-\bibliographystyle{plainnat}
+\section*{Limitations}
+The main limitations are the small manual semantic gold set and the dependence
+of the highest-scoring setting on upstream UD annotations. The raw UD-proxy
+result is also limited: it is a 200-sentence Perseus test slice and scores only
+selected UD-derived relation labels rather than the full manual semantic target.
+The raw classifier itself is still simple: it predicts pairwise edges with local
+context rather than performing global structured decoding. A more realistic raw
+parser would likely need a two-stage architecture that first decides whether a
+token should attach semantically, then selects the best head under graph-level
+constraints.
+
 \bibliography{references}
 
 \end{document}

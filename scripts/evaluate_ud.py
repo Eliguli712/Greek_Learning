@@ -22,7 +22,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import sys
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -191,6 +191,8 @@ def evaluate_ud(
     max_sentences: int,
     include_sentences: bool = False,
     use_relation_classifier: bool = False,
+    progress: Optional[Callable[[Dict[str, Any]], None]] = None,
+    progress_interval: int = 50,
 ) -> Dict[str, Any]:
     compiler = SemanticCompiler(
         project_root=PROJECT_ROOT,
@@ -212,6 +214,27 @@ def evaluate_ud(
     total_gold_tokens = 0
     aligned_tokens = 0
     per_sentence: List[Dict[str, Any]] = []
+    progress_interval = max(1, progress_interval)
+
+    def maybe_emit_progress(path: Path) -> None:
+        if progress is None:
+            return
+        if (
+            total_sentences == 1
+            or total_sentences % progress_interval == 0
+            or total_sentences >= max_sentences
+        ):
+            progress(
+                {
+                    "current_file": str(path),
+                    "max_sentences": max_sentences,
+                    "sentences_seen": total_sentences,
+                    "sentences_aligned": aligned_sentences,
+                    "sentences_skipped_alignment": skipped_sentences,
+                    "gold_tokens_seen": total_gold_tokens,
+                    "tokens_aligned": aligned_tokens,
+                }
+            )
 
     for path in conllu_paths:
         for sentence in read_conllu(path):
@@ -238,6 +261,7 @@ def evaluate_ud(
                             "pred_tokens": result.tokens,
                         }
                     )
+                maybe_emit_progress(path)
                 continue
 
             aligned_sentences += 1
@@ -297,6 +321,7 @@ def evaluate_ud(
                         "pred_relations": [list(item) for item in sent_pred_relations],
                     }
                 )
+            maybe_emit_progress(path)
 
         if total_sentences >= max_sentences:
             break
