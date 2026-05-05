@@ -20,7 +20,11 @@
 \singlespacing
 
 \title{Compiling Ancient Greek Semantic DAGs from Universal Dependencies}
-\author{Student Name \\ New York University}
+\author{
+Group 7\\
+Evan Liu, George Jiang, Bennet Wang, and Haocheng Han\\
+New York University
+}
 \date{May 2026}
 
 \begin{document}
@@ -235,6 +239,12 @@ only if its source token, destination token, and label all match the gold edge.
 This metric is strict but appropriate because the output is a graph, not a bag of
 independent labels. The experiment also reports DAG validity rate.
 
+Because the system is deterministic and rule-based, no supervised model is
+trained and no statistical parameters are tuned. The public UD test files and
+manual historical gold set are used only for reported evaluation. Development
+work consisted of designing the dependency-to-semantic mapping and validating
+the graph construction procedure, rather than fitting rules to a train/dev split.
+
 Two systems are compared on this task. The first is the full compiler described
 above, which maps UD dependencies directly into semantic graph edges. The second
 is a deliberately simple baseline. The baseline uses the same UD tokens, lemmas,
@@ -276,7 +286,9 @@ The main experimental entry points in the repository are
 \texttt{scripts/run\_ud\_dag.py} for corpus-scale conversion and
 \texttt{scripts/evaluate\_historical\_gold.py} for manual semantic evaluation.
 All quantitative results reported below were regenerated locally from those
-scripts inside the cloned project workspace.
+scripts inside the cloned project workspace. The project code, data files,
+evaluation scripts, and paper sources are available at
+\url{https://github.com/Eliguli712/Greek_Learning}.
 
 \section{Results}
 Table~\ref{tab:historical-results} shows the main comparison between the full
@@ -420,6 +432,11 @@ annotations used as input. Even so, the results are strong and consistent. The
 baseline comparison shows that the final compiler captures much more of the
 semantic structure than a local heuristic, and the main remaining error source
 is precise semantic filtering of modifiers rather than event structure itself.
+These results should not be read as a direct state-of-the-art comparison with
+full Ancient Greek parsers, semantic role labelers, or AMR-style systems. The
+project instead contributes a reproducible compiler and evaluation setup that
+could later be paired with stronger upstream parsing or learned semantic
+filtering.
 
 \section{Conclusion and Future Work}
 The paper presents a semantic DAG compiler for Ancient Greek. The system preserves token,
@@ -444,6 +461,16 @@ that made the current system attractive.
 
 The result is a reproducible compiler that turns real Ancient Greek treebank
 analyses into inspectable graph structure.
+
+\section*{Contributions}
+Evan Liu led the final evaluation and reporting work, including the UD-backed DAG
+evaluation, historical semantic gold evaluation, baseline comparison,
+presentation materials, and final paper preparation; he also delivered the final
+presentation. Haocheng Han contributed the initial project setup, morpheme and
+lexeme framework, lexicon resources, and early design documentation. Bennet Wang
+contributed the minimal viable compiler pipeline, phoneme processing,
+validation/evaluation utilities, and Aristotle test outputs. George Jiang
+contributed updates to the semantic tokenization component.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
