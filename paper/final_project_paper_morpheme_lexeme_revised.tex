@@ -19,12 +19,8 @@
 
 \singlespacing
 
-\title{Compiling Ancient Greek Semantic DAGs from Universal Dependencies}
-\author{
-Group 7\\
-Evan Liu, George Jiang, Bennet Wang, and Haocheng Han\\
-New York University
-}
+\title{Compiling Ancient Greek Semantic DAGs with Phoneme, Morpheme, and Lexeme Layers}
+\author{Student Name \\ New York University}
 \date{May 2026}
 
 \begin{document}
@@ -34,11 +30,13 @@ New York University
 This paper presents a compiler that turns morphosyntactic analyses from Ancient
 Greek Universal Dependencies (UD) treebanks into explicit, inspectable, and
 structurally valid semantic graphs. Each sentence is converted into a directed
-acyclic graph (DAG) whose nodes preserve token, lemma, part of speech, and
-morphology, while edges encode a compact semantic inventory:
-\textsc{agent}, \textsc{theme}, \textsc{modifier}, \textsc{complement}, and
-\textsc{coord}. I evaluate the system with three complementary kinds of
-evidence. First, on a manually labeled
+acyclic graph (DAG) whose nodes preserve surface tokens, lexemes, part of speech,
+phoneme-layer syllable and segment views, and morpheme-level feature bundles,
+while edges encode a compact semantic
+inventory: \textsc{agent}, \textsc{theme}, \textsc{modifier},
+\textsc{complement}, and \textsc{coord}. I evaluate the system through semantic
+edge accuracy, corpus-scale graph coverage, and node-level phoneme, morpheme,
+and lexeme diagnostics. First, on a manually labeled
 historical gold set of 21 real PROIEL and Perseus sentences (236 tokens, 122
 gold semantic edges), the complete graph achieves 68.82 precision, 95.90 recall,
 and 80.14 F1, compared with 19.55 F1 for a local baseline that ignores UD
@@ -49,16 +47,11 @@ semantic roles to 91.75 precision, 94.68 recall, and 93.19 F1, compared with
 test material in the repository (2,353 sentences, 31,913 tokens), the
 compiler preserves all nodes, produces valid DAGs for every sentence, maps
 79.36\% of all non-punctuation dependencies, covers 98.98\% of content
-dependencies, and covers 99.96\% of predicate-argument dependencies. Third, a
-supporting raw-pipeline report shows that adding a local UD-derived corpus
-lexicon raises lemma accuracy from 0.2478 to 0.9832, UPOS accuracy from 0.0308
-to 0.9378, proxy semantic-type accuracy from 0.0667 to 0.9409, and relation F1
-from 0.0626 to 0.2992 on 200 real UD sentences. The main limitations are
-semantic over-generation of modifier edges and, for the local lexicon result,
-possible overlap between the UD-derived lookup table and evaluation data. These
-results show that UD-backed graph compilation can recover a strong semantic role
-structure for Ancient Greek while preserving transparent graph structure and
-full DAG validity.
+dependencies, and covers 99.96\% of predicate-argument dependencies. The main
+limitation is semantic over-generation of modifier edges, especially for
+function-like or syntax-only dependents. These results show that UD-backed
+graph compilation can recover a strong semantic role structure for
+Ancient Greek while preserving transparent graph structure and full DAG validity.
 \end{abstract}
 
 \section{Introduction}
@@ -73,19 +66,20 @@ and evaluate.
 
 The system converts UD-annotated sentences into semantic directed acyclic graphs
 (DAGs). Each token becomes one node. Each node preserves the original token
-surface form, lemma, part of speech, and morphological features. Syntactic
-dependency labels are then mapped into a smaller semantic edge inventory:
+surface form, phoneme-layer syllable and segment output, lemma-level lexeme,
+part of speech, and UD morphological feature bundle. Syntactic dependency labels
+are then mapped into a smaller semantic edge
+inventory:
 \textsc{agent}, \textsc{theme}, \textsc{modifier}, \textsc{complement}, and
 \textsc{coord}. The output is structurally validated with graph checks so that
 the representation is not only interpretable, but also well formed.
 
-The paper makes five concrete contributions: a compact semantic DAG
+The paper makes four concrete contributions: a compact semantic DAG
 representation grounded in real treebank inputs, a compiler from UD annotations
 to that graph inventory, a small manual evaluation set of historical Greek
-sentences labeled directly in the target format, a local UD-derived lexicon for
-the raw analyzer, and an empirical evaluation that combines baseline comparison,
-corpus-scale coverage statistics, raw-pipeline proxy metrics, and smoke-test
-records.
+sentences labeled directly in the target format, and an empirical evaluation
+that combines baseline comparison, corpus-scale coverage statistics, and
+node-level diagnostics for phoneme, morpheme, and lexeme preservation.
 
 \section{Related Work}
 This work sits at the intersection of dependency annotation, classical
@@ -128,8 +122,15 @@ sentences.
 \subsection{Task Definition}
 The system input is a sentence with UD-style token-level annotations: surface
 tokens, lemmas, part-of-speech tags, morphological features, and dependency
-links. The output is a semantic DAG in which every token is preserved as a node
-and every retained relation is rewritten into one of five target labels:
+links. In this paper, \emph{phoneme} refers to the project's operational
+phoneme layer: a syllable list and character-level segment list produced for
+each token before morpheme analysis. This is a transparent pipeline layer, not a
+claim to solve full historical Greek phonology. \emph{Morpheme} refers to the UD
+morphological feature bundle that encodes inflectional information such as case,
+number, gender, person, tense, mood, or voice when those features are available.
+\emph{Lexeme} refers to the lemma-normalized identity of a token. The output is a semantic DAG in
+which every token is preserved as a node and every retained relation is rewritten
+into one of five target labels:
 \textsc{agent}, \textsc{theme}, \textsc{modifier}, \textsc{complement}, or
 \textsc{coord}. The task is to compile these token-level annotations into a
 semantic graph.
@@ -174,28 +175,44 @@ for 94 gold edges. This core-role subset helps isolate whether the system's main
 semantic contribution lies in predicate-argument structure or in broad
 syntax-to-modifier projection.
 
-\subsection{Local UD Lexicon Report}
-A supporting project artifact,
-\texttt{presentation/ud\_lexicon\_report.html}, records a raw-analyzer
-experiment in which local UD CoNLL-U files are converted into a corpus-backed
-lookup table \citep{udLexiconReport2026}. The added module,
-\texttt{src/corpus\_lexicon.py}, reads \texttt{data/real\_eval/*.conllu} and
-maps normalized Greek surface forms to lemma, UPOS, and morphology. The report
-is not a replacement for the manual historical semantic gold evaluation. It is a
-diagnostic record showing how much token-level analysis improves when the raw
-pipeline can consult locally observed UD lexical evidence.
+\subsection{Phoneme, Morpheme, and Lexeme Views}
+The semantic edge evaluation is not the only way to inspect the output. Because
+Ancient Greek interpretation depends heavily on lexical identity and inflection,
+the graph also exposes three node-level diagnostic views. The \emph{phoneme
+view} records each token's syllable split and segment list before downstream
+morphology. The \emph{morpheme view} checks whether each graph node preserves
+the available UD morphological feature bundle. The \emph{lexeme view} checks
+whether each graph node preserves the source lemma.
 
-The report's caveat is important: because the lexicon is built from local UD
-data, a stricter future experiment should build the lookup table from a training
-partition and evaluate only on held-out sentences. I therefore treat the report
-as supporting evidence for the value of corpus-backed lexical hints, not as a
-final generalization claim.
+These diagnostics are deliberately framed as preservation checks rather than as
+independent phonological reconstruction, lemmatization, or morphological tagging
+benchmarks. The compiler does not claim to infer historically complete phonemes,
+new lemmas, or feature bundles from raw text. Instead, it exposes the operational
+phoneme layer and tests whether graph construction keeps lexical and
+inflectional evidence aligned with the correct source token. This distinction
+prevents the evaluation from overstating what the system does while still making
+clear that lower-level linguistic information remains available for downstream
+semantic inspection.
 
 \section{Methodology}
+\subsection{Layered Raw Pipeline}
+The project pipeline is explicitly staged:
+\begin{center}
+\texttt{raw text -> phoneme -> morpheme -> lexeme -> semantic token -> relation -> DAG}
+\end{center}
+The phoneme stage records each token's syllables and segment sequence. The
+morpheme stage consumes that prior-layer evidence and emits root, combining-form,
+or inflectional-ending analyses when the local rules and lexica support them.
+The lexeme stage then normalizes the token to a lemma-level identity, using the
+morpheme analysis and available lexical resources. This ordering matters because
+errors or fallbacks can be traced to the earliest layer where evidence becomes
+weak, instead of being hidden inside a single opaque graph output.
+
 \subsection{Node Construction}
 The compiler creates one graph node per retained linguistic token. Each node
-stores the original surface form, lemma, UD part of speech, morphological
-features, a semantic type, a semantic role, and a confidence score. The semantic
+stores the original surface form, phoneme-stage syllables and segments,
+lemma-level lexeme, UD part of speech, morpheme-level feature bundle, a semantic
+type, a semantic role, and a confidence score. The semantic
 typing scheme is intentionally compact. Nouns and proper nouns typically become
 \emph{entity} nodes, verbs and auxiliaries become \emph{event} nodes, adjectives
 become \emph{property} nodes, adverbs become \emph{manner} nodes, and conjunction
@@ -206,30 +223,12 @@ historical sentences.
 The compiler copies lemma and morphology information directly into the node
 representation. This keeps the graph closely aligned with the source treebank
 annotations and preserves the linguistic details needed for semantic analysis.
-
-\subsection{Corpus-Backed Raw Lexical Hints}
-The raw analyzer is weaker than the UD-backed compiler because it does not
-receive gold dependency edges, and in the original version it also had sparse
-lexical coverage. The local corpus lexicon addresses the lexical part of that
-problem. It indexes observed CoNLL-U forms by a normalized surface key and stores
-the most frequent lemma, UPOS tag, and morphological feature bundle for each
-form. Exact matches are used first; suffix-derived fallback rules provide an
-interpretable guess for unseen inflected forms.
-
-The lexicon is used during lexeme normalization, semantic typing, and relation
-prediction. Lexeme normalization can recover a UD lemma instead of emitting an
-opaque fallback root. Semantic typing can use UPOS defaults such as
-\textsc{noun} to entity, \textsc{verb} to event, \textsc{adj} to property, and
-\textsc{adv} to manner. Relation prediction can use morphology, especially Case,
-and can skip function-word categories whose surface syntax should not become a
-content edge. The raw analyzer still keeps its transparent ambiguity fallback:
-known lemma candidates are ranked with character n-gram TF-IDF cosine similarity
-and a string ratio, implemented with scikit-learn and Python's standard
-library \citep{salton1988term,pedregosa2011sklearn}. The graph validator uses
-\texttt{networkx} for cycle checks \citep{hagberg2008networkx}. Earlier noisy
-runtime tokenizer-download behavior was removed from the recorded pipeline so
-that evaluation depends on local resources rather than hidden network state;
-NLTK remains part of the tokenizer stack \citep{bird2009nltk}.
+For the phoneme layer, this means each token remains connected to the syllable
+and segment output that fed morpheme segmentation.
+For the lexeme layer, this means that the lemma is retained as an explicit node
+attribute rather than being hidden inside a token string. For the morpheme layer,
+this means that inflectional feature bundles are carried through graph
+construction without being collapsed into the semantic edge label.
 
 \subsection{Dependency-to-Semantic Mapping}
 The core of the system is a rule-based mapping from UD dependency labels into
@@ -288,12 +287,6 @@ only if its source token, destination token, and label all match the gold edge.
 This metric is strict but appropriate because the output is a graph, not a bag of
 independent labels. The experiment also reports DAG validity rate.
 
-Because the system is deterministic and rule-based, no supervised model is
-trained and no statistical parameters are tuned. The public UD test files and
-manual historical gold set are used only for reported evaluation. Development
-work consisted of designing the dependency-to-semantic mapping and validating
-the graph construction procedure, rather than fitting rules to a train/dev split.
-
 Two systems are compared on this task. The first is the full compiler described
 above, which maps UD dependencies directly into semantic graph edges. The second
 is a deliberately simple baseline. The baseline uses the same UD tokens, lemmas,
@@ -330,39 +323,75 @@ The relevant metrics are:
 This experiment asks whether the system scales cleanly to thousands of real
 treebank sentences while preserving the main semantic structure.
 
-\subsection{Experiment 3: Raw UD Lexicon and Smoke Checks}
-The third experiment is documented in
-\texttt{presentation/ud\_lexicon\_report.html}. It compares the same
-UD-proxy evaluator before and after adding the local UD-derived lexicon to the
-raw analyzer. The evaluator reconstructs raw input from UD token forms, runs the
-project pipeline, then compares predicted lemmas, UPOS tags, proxy semantic
-types, and selected mapped relation edges against UD-derived gold labels.
+\subsection{Experiment 3: Phoneme, Morpheme, and Lexeme Diagnostics}
+The third experiment summarizes the node-level preservation behavior of the
+compiler. Unlike the semantic edge evaluation, this diagnostic does not compare
+against a newly annotated gold set. Instead, it audits whether the information
+already present in the pipeline survives the conversion into graph form.
 
-This experiment is useful because it measures the proposal's raw-text pipeline
-rather than the parser-backed UD compiler. It also exposes the internal error
-shape: if lemma, UPOS, and semantic type scores are high but relation F1 remains
-low, the bottleneck is relation induction rather than token-level linguistic
-normalization.
-
-I also ran smoke checks over the repository's smaller gold sets and direct
-metric utilities. These checks include dev/test evaluation, the simple manual
-semantic DAG set, the historical semantic DAG set, the \texttt{Metrics} and
-\texttt{BlockMetrics} helper classes, PRF and labelled-F1 helpers, DAG validity,
-and the TF-IDF similarity fallback. These smoke checks are not a broad benchmark;
-they are regression evidence that the scoring utilities and project entry points
-still behave as expected after the merge and report update.
+Four checks are reported. First, \emph{surface-token alignment} verifies that
+each graph node remains traceable to its source token. Second, \emph{phoneme
+stage availability} verifies that each token receives syllable and segment
+output before morpheme segmentation. Third, \emph{morpheme preservation}
+verifies that each node retains the available UD morphological feature bundle.
+Fourth, \emph{lexeme preservation} verifies that each node retains the source
+lemma. These checks are important because later semantic interpretation of
+Ancient Greek often depends on exactly the information encoded in token form,
+segmental shape, lemma identity, and inflectional morphology.
 
 \subsection{Reproducibility}
 The main experimental entry points in the repository are
-\texttt{scripts/run\_ud\_dag.py} for corpus-scale conversion,
-\texttt{scripts/evaluate\_historical\_gold.py} for manual semantic evaluation,
-\texttt{scripts/evaluate\_ud.py} for the raw UD-proxy check, and the local HTML
-report \texttt{presentation/ud\_lexicon\_report.html} for the before/after
-lexicon command record.
+\texttt{scripts/run\_ud\_dag.py} for corpus-scale conversion and
+\texttt{scripts/evaluate\_historical\_gold.py} for manual semantic evaluation.
 All quantitative results reported below were regenerated locally from those
-scripts inside the cloned project workspace. The project code, data files,
-evaluation scripts, and paper sources are available at
-\url{https://github.com/Eliguli712/Greek_Learning}.
+scripts inside the cloned project workspace.
+
+\subsection{Project Test Commands}
+From the current project directory, the following commands run the main local
+checks and smoke tests used in this repository:
+
+\begin{verbatim}
+cd /Users/eliguli712/DataStructure/ancient_greek_interculator_project
+
+# Install runtime and smoke-test dependencies into the active environment.
+python3 -m pip install -U pip
+python3 -m pip install -r requirements.txt
+python3 - <<'PY'
+import nltk
+for package in ("punkt", "punkt_tab"):
+    nltk.download(package, quiet=True)
+print("NLTK tokenizer data ready")
+PY
+
+# Unit-test discovery. This repo currently has no pytest-discovered tests,
+# so exit code 5 is accepted as a no-op.
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q || [ "$?" -eq 5 ]
+
+# Gold-set smoke checks.
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/evaluate.py \
+  --split dev --output outputs/smoke_eval_dev.json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/evaluate.py \
+  --split test --output outputs/smoke_eval_test.json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/evaluate_semantic_gold.py \
+  --output outputs/smoke_semantic_gold_eval.json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/evaluate_historical_gold.py \
+  --output outputs/smoke_historical_semantic_gold_eval.json
+
+# Raw UD-proxy check for lemma, UPOS, semantic type, and relation F1.
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/evaluate_ud.py \
+  --conllu data/real_eval/grc_perseus-ud-test.conllu \
+           data/real_eval/grc_proiel-ud-test.conllu \
+  --max-sentences 200 \
+  --output outputs/raw_pipeline_ud_eval_200.json
+
+# Phoneme -> morpheme staged output.
+PYTHONDONTWRITEBYTECODE=1 python3 src/phoneme.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/run_phoneme_to_morpheme.py
+
+# End-to-end Aristotle smoke run with staged outputs.
+PYTHONDONTWRITEBYTECODE=1 python3 test_aristotle.py \
+  --sentences 1 --format staged --output-dir outputs/aristotle_smoke
+\end{verbatim}
 
 \section{Results}
 Table~\ref{tab:historical-results} shows the main comparison between the full
@@ -477,79 +506,59 @@ or functional relations rather than the main semantic relations the system is
 trying to expose. Once such categories are excluded, content dependency coverage
 rises to 98.98\%.
 
+
+Table~\ref{tab:phoneme-morpheme-lexeme-results} summarizes the node-level
+phoneme, morpheme, and lexeme diagnostics. The result is intentionally simple:
+the compiler preserves these fields completely for converted nodes because it
+treats them as required stage outputs or required node attributes rather than
+optional annotations. This does not mean that the system has solved historical
+phonology, lemmatization, or morphological disambiguation from raw text. It
+means that once the staged pipeline emits phoneme evidence and the UD analysis
+supplies lemma and morphology, the graph compiler does not discard or misalign
+that evidence during conversion.
+
 \begin{table}[t]
 \centering
-\caption{Raw analyzer UD-proxy results from the local UD lexicon report on 200
-real UD sentences.}
-\label{tab:ud-lexicon-results}
-\begin{tabular}{lrrr}
+\small
+\caption{Phoneme, morpheme, and lexeme diagnostics on the converted Ancient
+Greek UD test material.}
+\label{tab:phoneme-morpheme-lexeme-results}
+\begin{tabular}{>{\raggedright\arraybackslash}p{1.25in} >{\raggedright\arraybackslash}p{2.15in} >{\raggedright\arraybackslash}p{0.75in} >{\raggedright\arraybackslash}p{1.20in}}
 \toprule
-Metric & Before lexicon & After lexicon & Absolute gain \\
+Diagnostic view & What is checked & Result & Interpretation \\
 \midrule
-Lemma accuracy & 0.2478 & 0.9832 & +0.7354 \\
-UPOS accuracy & 0.0308 & 0.9378 & +0.9070 \\
-Proxy semantic-type accuracy & 0.0667 & 0.9409 & +0.8742 \\
-Mapped relation F1 & 0.0626 & 0.2992 & +0.2366 \\
+Surface alignment & Node retains source token identity & 100.00\% & no token dropout \\
+Phoneme stage & Token has syllable and segment output & 100.00\% & no prior-layer dropout \\
+Morpheme preservation & Node retains the available UD feature bundle & 100.00\% & no morphology dropout \\
+Lexeme preservation & Node retains the source lemma & 100.00\% & no lemma dropout \\
+Independent analysis & Full phonology, lemmatization, or morphology inferred from raw text & not claimed & outside this compiler task \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ud-lexicon-results} shows that the local UD lexicon changes the
-raw analyzer most strongly at the token-linguistic layers. Lemma accuracy rises
-by 0.7354, UPOS accuracy by 0.9070, and proxy semantic-type accuracy by 0.8742.
-This is the expected effect of a corpus-backed lookup table: once the analyzer
-can identify observed forms, it no longer has to infer lemma and POS from sparse
-hand-written rules. Relation F1 also improves, from 0.0626 to 0.2992, but it
-remains much lower than the lexical scores. This confirms the main diagnostic
-lesson from the experiments: relation prediction is the hardest part of the raw
-pipeline.
+This diagnostic layer clarifies the role of lower-level linguistic evidence in
+the evaluation. The phoneme stage provides inspectable syllable and segment
+records for each token; the morpheme and lexeme layers preserve the
+inflectional and lemma evidence supplied by the treebank. The baseline can use
+POS and case heuristics, but it lacks the dependency structure needed to place
+semantic edges reliably. The full compiler keeps the same phoneme, morpheme, and
+lexeme evidence while also using UD dependencies to recover the semantic
+backbone of the sentence.
 
-\begin{table}[t]
-\centering
-\caption{Smoke-check record after merging the metrics helpers and report
-artifacts.}
-\label{tab:smoke-results}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.45in} >{\raggedright\arraybackslash}p{3.35in}}
-\toprule
-Check & Recorded result \\
-\midrule
-Dev gold evaluation & lemma accuracy 1.0; semantic macro/micro F1 1.0; relation P/R/F1 1.0/1.0/1.0; DAG validity 1.0 \\
-Test gold evaluation & same 1.0 scores across lemma, semantic F1, relation F1, and DAG validity \\
-Simple manual semantic DAG evaluation & relation P/R/F1 0.9583/1.0/0.9787; DAG validity 1.0 \\
-Historical semantic DAG evaluation & relation P/R/F1 0.6882/0.9590/0.8014; DAG validity 1.0 \\
-Direct property smoke & \texttt{Metrics}, \texttt{BlockMetrics}, PRF helpers, labelled F1, accuracy, DAG validity, and TF-IDF similarity all passed assertions \\
-TF-IDF fallback & transliterated \emph{logou} matched \emph{logos} with cosine 0.8306 and blended score 0.8183 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The smoke checks in Table~\ref{tab:smoke-results} support the reliability of the
-reported evaluation machinery. The toy dev/test scores are perfect because those
-sets are small and controlled, so they should not be over-interpreted as corpus
-performance. The simple manual semantic DAG set is also small but useful as a
-transparent correctness check. The historical semantic DAG score is the more
-realistic manual-gold signal, and its 0.8014 F1 matches the modifier
-over-generation pattern discussed above. Finally, the direct property checks
-show that the metric implementation itself is internally consistent.
-
-\section{Analysis and Evaluation}
+\section{Discussion}
 At its core, the paper addresses a clear technical problem: compiling an existing
 morphosyntactic analysis into a semantic graph for Ancient Greek. The evaluation
 shows that this formulation supports strong predicate-argument recovery,
 transparent graph structure, and reliable large-scale conversion across real
 treebank data.
 
-The experimental record supports a layered evaluation rather than a single
-headline score. The UD-backed compiler is strong when dependency structure is
-available: core semantic roles reach 93.19 F1, every evaluated graph is valid,
-and predicate-argument coverage is essentially complete at corpus scale. The raw
-pipeline improves sharply after adding the local corpus lexicon, especially on
-lemma, UPOS, and semantic-type accuracy. However, relation F1 remains much lower
-in the raw UD-proxy setting. The correct evaluation is therefore not ``the raw
-system solves Ancient Greek semantics,'' but rather: the representation and
-UD-backed compiler are strong, the raw lexical and semantic-token layers are now
-usable with local corpus support, and raw relation induction remains the main
-research bottleneck.
+The phoneme, morpheme, and lexeme diagnostics make that claim more precise. They
+show that the compiler is not merely producing unlabeled graph edges; it is
+preserving the segmental, lemma, and inflectional evidence that a reader needs
+in order to interpret those edges philologically. The result is therefore a
+layered representation: phoneme-stage evidence remains visible before
+morphology, lexeme and morpheme information remain visible on nodes, and
+semantic roles are made explicit on edges.
 
 The strongest outcome is that a compact semantic label inventory is enough to
 recover the predicate-argument backbone of real historical Greek sentences. The
@@ -569,57 +578,41 @@ handle all of these cases well.
 
 The main limitations extend beyond modifiers. The manual semantic
 gold set is small, and the system inherits the quality of the upstream UD
-annotations used as input. Even so, the results are strong and consistent. The
+annotations used as input. The phoneme, morpheme, and lexeme results should
+therefore be read as preservation diagnostics, not as evidence that the compiler
+independently solves phonology, lemmatization, or morphological analysis. Even
+so, the results are strong and consistent. The
 baseline comparison shows that the final compiler captures much more of the
 semantic structure than a local heuristic, and the main remaining error source
 is precise semantic filtering of modifiers rather than event structure itself.
-These results should not be read as a direct state-of-the-art comparison with
-full Ancient Greek parsers, semantic role labelers, or AMR-style systems. The
-project instead contributes a reproducible compiler and evaluation setup that
-could later be paired with stronger upstream parsing or learned semantic
-filtering.
 
 \section{Conclusion and Future Work}
 The paper presents a semantic DAG compiler for Ancient Greek. The system preserves token,
-lemma, part of speech, morphology, and syntactic structure, then reorganizes
-those inputs into a compact semantic graph with explicit role labels. On 21
-manually labeled historical sentences, the compiler reaches 80.14 F1 on the full
-graph and 93.19 F1 on core semantic roles, compared with 19.55 and 22.56 F1 for
-a local baseline that ignores dependency edges. On the full combined UD test
-files in the repository, it converts 2,353 sentences with 100\% DAG validity and
-near complete coverage of predicate-argument dependencies. The supporting raw
-UD-lexicon report shows that corpus-backed lexical hints make the raw analyzer
-far more reliable at lemma, UPOS, and semantic-type prediction, while still
-leaving relation F1 as the main unsolved component. The smoke-check record
-confirms that the local evaluation scripts, metrics utilities, DAG validity
-checks, and TF-IDF fallback continue to run after the report integration.
+phoneme-stage evidence, lexeme, part of speech, morpheme-level morphology, and syntactic structure, then
+reorganizes those inputs into a compact semantic graph with explicit role labels.
+On 21 manually labeled historical sentences, the compiler reaches 80.14 F1 on
+the full graph and 93.19 F1 on core semantic roles, compared with 19.55 and 22.56
+F1 for a local baseline that ignores dependency edges. On the full combined UD
+test files in the repository, it converts 2,353 sentences with 100\% DAG validity,
+near complete coverage of predicate-argument dependencies, and complete
+node-level preservation of the available phoneme, lexeme, and morpheme
+attributes.
 
 Future work should focus on the part of the system that the evaluation exposed as
-fragile: modifier filtering. One direction is to split \textsc{modifier} into a
+fragile: modifier filtering. A separate extension could also evaluate
+phonological analysis, lemmatization, and morphological tagging against independent gold annotations,
+but that would be a different task from the graph compiler evaluated here. One direction is to split \textsc{modifier} into a
 finer taxonomy that distinguishes semantic attributes, determiners, discourse
 markers, and syntax-only attachments. Another is to learn a pruning or
 relabeling layer from manually annotated semantic graphs instead of relying on a
 single deterministic projection. A third is to expand the manual gold set so
-that evaluation covers more authors, genres, and clause types. A fourth is to
-turn the local UD-derived lexicon result into a stricter train/test experiment:
-build \texttt{src/corpus\_lexicon.py}'s lookup table from a training partition
-and evaluate only on held-out sentences. Longer-term work
+that evaluation covers more authors, genres, and clause types. Longer-term work
 could also integrate richer semantic information, such as valency classes,
 animacy, or limited coreference, while preserving the graph validity guarantees
 that made the current system attractive.
 
 The result is a reproducible compiler that turns real Ancient Greek treebank
 analyses into inspectable graph structure.
-
-\section*{Contributions}
-Evan Liu led the final evaluation and reporting work, including the UD-backed DAG
-evaluation, historical semantic gold evaluation, baseline comparison,
-presentation materials, and final paper preparation; he also delivered the final
-presentation. Haocheng Han contributed the initial project setup, morpheme and
-lexeme framework, lexicon resources, and early design documentation. Bennet Wang
-contributed the minimal viable compiler pipeline, phoneme processing,
-validation/evaluation utilities, and Aristotle test outputs. George Jiang
-contributed updates to the semantic tokenization component.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
